@@ -112,7 +112,6 @@ export async function PUT(req: Request) {
       }));
     }
     if (dueDate) updateFields.dueDate = dueDate;
-
     updateFields.updatedAt = new Date(); // Add updated timestamp
 
     const result = await project.updateOne(
