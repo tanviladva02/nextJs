@@ -1,52 +1,124 @@
-// // utils/validation.ts
+import { TaskData } from "@/src/interface/taskInterface";
+import mongoose from "mongoose";
+import { UserUpdate } from "@/src/interface/userInterface";
+import { ProjectInterface } from "@/src/interface/projectInterface";
 
-// import { TaskData } from "@/src/model/model.task";
-// import mongoose from "mongoose";
-// // import  ObjectId  from "mongoose";
+export function validateTask(task: TaskData): boolean {
+  if (!task.name || typeof task.name !== "string") {
+    throw new Error("Task name is required and should be a string.");
+  }
 
-// /**
-//  * Validates the fields of a task before saving to the database.
-//  * @param task - The task data to validate.
-//  * @returns {boolean} - Returns true if validation passes, otherwise throws an error.
-//  */
-// export function validateTask(task: TaskData) {
-//   if (!task.name || typeof task.name !== "string") {
-//     throw new Error("Task name is required and should be a string.");
-//   }
+  if (task.priority == null || typeof task.priority !== "number") {
+    throw new Error("Priority is required and should be a number.");
+  }
 
-//   if (task.priority == null || typeof task.priority !== "number") {
-//     throw new Error("Priority is required and should be a number.");
-//   }
+  if (task.status == null || typeof task.status !== "number") {
+    throw new Error("Status is required and should be a number.");
+  }
 
-//   if (task.status == null || typeof task.status !== "number") {
-//     throw new Error("Status is required and should be a number.");
-//   }
+  if (!task.users || !Array.isArray(task.users) || task.users.length === 0) {
+    throw new Error("Users are required and should be an array of user objects.");
+  }
 
-//   if (!task.users || !Array.isArray(task.users) || task.users.length === 0) {
-//     throw new Error("Users are required and should be an array of user objects.");
-//   }
+  task.users.forEach((user: { userId: unknown }) => {
+    if (typeof user.userId !== 'string' || !mongoose.Types.ObjectId.isValid(user.userId)) {
+      throw new Error("Each user must have a valid userId.");
+    }
+  });
 
-//   task.users.forEach((user: { userId: unknown }) => {
-//     if (typeof user.userId !== 'string' || !mongoose.Types.ObjectId.isValid(user.userId)) {
-//       throw new Error("Each user must have a valid userId.");
-//     }
-//   });
+  if (!task.dueDate) {
+    throw new Error("Due date is required and should be a valid date.");
+  }
 
-//   if (!task.dueDate || !(task.dueDate instanceof Date)) {
-//     throw new Error("Due date is required and should be a valid date.");
-//   }
+  if (!task.createdBy || !mongoose.Types.ObjectId.isValid(task.createdBy)) {
+    throw new Error("CreatedBy field must be a valid ObjectId.");
+  }
 
-//   if (!task.createdBy || !mongoose.Types.ObjectId.isValid(task.createdBy)) {
-//     throw new Error("CreatedBy field must be a valid ObjectId.");
-//   }
-
-//   if (task.updatedBy && !!mongoose.Types.ObjectId.isValid(task.updatedBy)) {
-//     throw new Error("UpdatedBy field must be a valid ObjectId.");
-//   }
-
+  if (task.updatedBy && !!mongoose.Types.ObjectId.isValid(task.updatedBy)) {
+    throw new Error("UpdatedBy field must be a valid ObjectId.");
+  }
+  
 //   if (!task.projectId || !!mongoose.Types.ObjectId.isValid(task.projectId)) {
-//     throw new Error("ProjectId must be a valid ObjectId.");
-//   }
+  if (!task.projectId) {
+    throw new Error("ProjectId must be a valid ObjectId.");
+  }
 
-//   return true; // If all validations pass
-// }
+  return true; // If all validations pass
+}
+
+export function validateUser(user: UserUpdate): boolean {
+    if (!user.name || typeof user.name !== "string") {
+      throw new Error("User name is required and should be a string.");
+    }
+  
+    if (!user.email || typeof user.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
+      throw new Error("Email is required and should be a valid email format.");
+    }
+  
+    if (!user.password || user.password.length < 6) {
+      throw new Error("Password is required and should be at least 6 characters long.");
+    }
+  
+    if (!user.mobile || !/^[0-9]{10}$/.test(user.mobile.toString())) {
+      throw new Error("Mobile number is required and should be a valid 10-digit number.");
+    }
+  
+    if (user.gender === undefined || ![1, 2, 3].includes(user.gender)) {
+      throw new Error("Gender is required and should be one of [1, 2, 3].");
+    }
+  
+    if (!user.birthDate) {
+      throw new Error("Birth date is required and should be a valid date.");
+    }
+  
+    if (user.age !== undefined) {
+      throw new Error("Age is undefined.");
+    }
+  
+    return true; // If all validations pass
+}
+
+export function validateProject(project: ProjectInterface): boolean {
+  // Validate project name
+  if (!project.name || typeof project.name !== "string") {
+    throw new Error("Project name is required and should be a string.");
+  }
+
+  // Validate project status
+  if (project.status == null || typeof project.status !== "number") {
+    throw new Error("Project status is required and should be a number.");
+  }
+
+  // Validate users array
+  if (!project.users || !Array.isArray(project.users) || project.users.length === 0) {
+    throw new Error("Users are required and should be an array of user objects.");
+  }
+
+  // Validate each user object within the users array
+  // project.users.forEach((user: { userId: unknown; role: unknown }) => {
+  //   if (typeof user.userId !== "string" ) {
+  //     throw new Error("Each user must have a valid userId.");
+  //   }
+
+  //   if (user.role == null) {
+  //     throw new Error("Each user must have a valid role from the UserRole enum.");
+  //   }
+  // });
+
+  // Validate project dueDate
+  if (!project.dueDate || !(project.dueDate instanceof Date)) {
+    throw new Error("Due date is required and should be a valid date.");
+  }
+
+  // Validate createdBy field
+  if (!project.createdBy || !mongoose.Types.ObjectId.isValid(project.createdBy)) {
+    throw new Error("CreatedBy field must be a valid ObjectId.");
+  }
+
+  // Validate updatedBy field if provided
+  if (project.updatedBy && !mongoose.Types.ObjectId.isValid(project.updatedBy)) {
+    throw new Error("UpdatedBy field must be a valid ObjectId.");
+  }
+
+  return true; // If all validations pass
+}

@@ -1,15 +1,16 @@
-// src/services/projectService.ts
 import Project from "@/src/model/model.project";
 import { ObjectId } from "mongodb";
 import User from "@/src/model/model.user";
 import { throwError } from "@/src/utils/errorhandler";
-import connectToDatabase from "@/src/utils/db";
+// import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose";
+import { UserRole } from "@/src/model/model.project";
+import { validateProject } from "../utils/validation";
 
 // Create a new project
 export async function POST(name: string, status: number, createdBy: string, users: Array<{ userId: string; role: string }>, dueDate: Date, archived?: boolean) {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const userIds = users.map((user) => user.userId);
 
     // Validate userIds (check if the users exist)
@@ -30,17 +31,25 @@ export async function POST(name: string, status: number, createdBy: string, user
       dueDate,
     });
 
+    validateProject(newProject);
+
     return await newProject.save();
-  } catch (error) {
-    console.error("Error in createProjectService:", error);
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 // Fetch all projects with aggregation
 export async function GET() {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const aggregationPipeline: mongoose.PipelineStage[] = [
       { $unwind: "$users" },
       {
@@ -91,16 +100,22 @@ export async function GET() {
     ];
 
     return await Project.aggregate(aggregationPipeline).exec();
-  } catch (error) {
-    console.error("Error in getProjectsService:", error);
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 // Update a project
-export async function PUT(id: string, name?: string, status?: number, archived?: boolean, updatedBy?: string, users?: Array<{ userId: string; role: string }>, dueDate?: Date) {
+export async function PUT(id: string,currentUser: { _id: string; role: UserRole } , name?: string, status?: number, archived?: boolean, updatedBy?: string, users?: Array<{ userId: string; role: string }> , dueDate?: Date) {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const updateFields: Record<string, unknown> = {};
 
     if (name) updateFields.name = name;
@@ -128,8 +143,14 @@ export async function PUT(id: string, name?: string, status?: number, archived?:
     }
 
     return result;
-  } catch (error) {
-    console.error("Error in updateProjectService:", error);
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }

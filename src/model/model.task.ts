@@ -1,31 +1,6 @@
 import mongoose, { Schema, model, models } from "mongoose";
-
-// Define an interface for the task fields
-export interface taskInterface {
-  name: string;
-  priority: number;
-  status: number;
-  archived: boolean;
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
-  dueDate: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
-  users: string[]; // Store userIds as strings
-  projectId: mongoose.Types.ObjectId; // Reference to Project
-}
-
-export interface TaskData {
-  name: string;
-  priority: number;
-  status: number;
-  createdBy: string;
-  updatedBy: string;
-  users: { userId: string }[];
-  dueDate: Date;
-  archived : boolean;
-  projectId: string;
-}
+import { taskInterface } from "../interface/taskInterface";
+import { TaskData } from "../interface/taskInterface";
 
 const taskSchema = new Schema<taskInterface,TaskData>(
   {
@@ -33,7 +8,7 @@ const taskSchema = new Schema<taskInterface,TaskData>(
     priority: { type: Number, required: true },
     status: { type: Number, required: true },
     archived: { type: Boolean, default: false },
-    users: [{ type: String, required: true }], // Store userIds as strings (fixed)
+    users: [{ type: String, required: true }], 
     dueDate: { type: Date, required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

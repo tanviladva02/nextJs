@@ -1,26 +1,17 @@
 import mongoose, { Schema, model, models } from "mongoose";
-
-// Define an interface for the project fields
-export interface ProjectInterface {
-  name: string;
-  status: number;
-  createdBy: mongoose.Types.ObjectId;
-  updatedBy?: mongoose.Types.ObjectId;
-  dueDate: Date;
-  users: Array<{ userId: mongoose.Types.ObjectId; role: UserRole }>;
-  createdAt?: Date;
-  updatedAt?: Date;
-  archived?: boolean;
-}
+import { ProjectInterface } from "../interface/projectInterface";
 
 // Enum for user roles
-enum UserRole {
-  CREATOR = "owner",
-  OWNER = "admin",
-  GENERAL_WORKER = "user",
+export enum UserRole {
+  OWNER = 1,
+  ADMIN = 2,
+  USER = 3,
 } // owner , admin ,user
 
-// Define the project schema
+// export function canUpdateTask(userRole: UserRole): boolean {
+//   return userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
+// }
+
 const projectSchema = new Schema<ProjectInterface>(
   {
     name: { type: String, required: true },
@@ -30,8 +21,8 @@ const projectSchema = new Schema<ProjectInterface>(
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         role: {
-          type: String,
-          enum: Object.values(UserRole),
+          type: Number,
+          enum: Object.values(UserRole).filter((value) => typeof value === "number"),
           required: true,
         },
       },
@@ -52,7 +43,6 @@ const projectSchema = new Schema<ProjectInterface>(
   }
 );
 
-// Use the model if it already exists, otherwise define it
 const Project = models.project || model("project", projectSchema);
 
-export default Project; // model file
+export default Project; 

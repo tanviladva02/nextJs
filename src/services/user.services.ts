@@ -1,26 +1,14 @@
-import User, { UserUpdate ,calculateAge } from "@/src/model/model.user";
+import User, { calculateAge } from "@/src/model/model.user";
+import { UserUpdate } from "../interface/userInterface";
 import bcrypt from "bcrypt";
 import { throwError } from "@/src/utils/errorhandler";
-import connectToDatabase from "@/src/utils/db";
-
-
+// import connectToDatabase from "@/src/utils/db";
+import {validateUser} from "@/src/utils/validation";
 
 export async function addUser(data: UserUpdate) {
   try {
-    await connectToDatabase();
-    const { name, email, password, mobile, gender, birthDate, role } = data;
-
-    if (!name || !email || !password || !mobile || !gender || !birthDate || !role) {
-      throwError("All fields are required!", 400);
-    }
-
-    if (!/^\d{10}$/.test(mobile as string)) {
-      throwError("Invalid mobile number. It must be a 10-digit string.", 400);
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate as string)) {
-      throwError("Invalid birthDate format. Expected 'YYYY-MM-DD'.", 400);
-    }
+    // await connectToDatabase();
+    const { name, email, password, mobile, gender, birthDate } = data;
 
     const normEmail = email.toLowerCase();
     const age = await calculateAge(birthDate as string);
@@ -35,32 +23,49 @@ export async function addUser(data: UserUpdate) {
       birthDate,
       normEmail,
       age,
-      archived: false,
-      role,
+      archived: false
     });
+  
+
+    validateUser(newUser);
 
     await newUser.save();
     return newUser;
-  } catch (error) {
-      throw error;
+  }  catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 export async function getAllUsers() {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const users = await User.find({});
     if (users.length === 0) {
       throwError("No users found", 404);
     }
     return users;
-  } catch (error) {
-      throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 export async function updateUser(id: string, data: Partial<UserUpdate>) {
   try {
+    // await connectToDatabase();
     const updateFields: Partial<UserUpdate> = { ...data };
 
     if (updateFields.password) {
@@ -73,7 +78,16 @@ export async function updateUser(id: string, data: Partial<UserUpdate>) {
     }
 
     return User.findById(id);
-  } catch (error) {
-      throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
+
+

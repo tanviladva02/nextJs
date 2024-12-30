@@ -1,19 +1,19 @@
-import Task , {TaskData}  from "@/src/model/model.task";
+import Task   from "@/src/model/model.task";
+import { TaskData } from "../interface/taskInterface";
 import Project from "@/src/model/model.project";
 import User from "@/src/model/model.user";
 import { ObjectId } from "mongodb";
 import { throwError } from "@/src/utils/errorhandler";
-import connectToDatabase from "@/src/utils/db";
+// import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose"; 
+import { validateTask } from "../utils/validation";
 
 export async function createTask(taskData: TaskData) {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const { name, priority, status, createdBy, users, dueDate, projectId } = taskData;
-
-    if (!name || priority == null || status == null || !createdBy || !users || !dueDate || !projectId) {
-      throwError("All fields (name, priority, status, createdBy, users, dueDate, projectId) are required!", 400);
-    }
+    console.log(taskData);
+    validateTask(taskData);
 
     const userIds = users.map((user: { userId: string }) => user.userId);
 
@@ -33,15 +33,21 @@ export async function createTask(taskData: TaskData) {
     });
 
     return await newTask.save();
-  } catch (error) {
-      console.error("Error in createProjectService:", error);
-      throw error;
+  }  catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 export async function getTasks() {
   try {
-    await connectToDatabase();
+    // await connectToDatabase();
     const aggregationPipeline : mongoose.PipelineStage[] = [
       { $match: { archived: false } },
       {
@@ -75,19 +81,30 @@ export async function getTasks() {
     if (tasks.length === 0) throwError("No tasks found", 404);
   
     return tasks;
-  } catch (error) {
-    throw error;
+  }  catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
 export async function updateTask(id: string, taskData: TaskData) {
   try {
+
+    // await connectToDatabase();
     const { name, priority, status, archived, updatedBy, users, dueDate, projectId } = taskData;
 
-    if (projectId) {
-      const validProject = await Project.findById(projectId);
-      if (!validProject) throwError("Invalid projectId.", 400);
-    }
+    // if (projectId) {
+    //   // const validProject = await Project.findById(projectId);
+    //   // if (!validProject) throwError("Invalid projectId.", 400);
+    //   const userIds = users.map((user) => user.userId);
+    //   await validateUserPermission(userIds, projectId);
+    // }
 
     const updateFields: Record<string, unknown> = {};
 
@@ -114,7 +131,15 @@ export async function updateTask(id: string, taskData: TaskData) {
     if (result.matchedCount === 0) throwError("Task not found", 404);
 
     return await Task.findOne({ _id: new ObjectId(id) });
-  } catch (error) {
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
+

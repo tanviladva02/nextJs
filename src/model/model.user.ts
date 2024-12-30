@@ -1,21 +1,6 @@
 import  { Schema, model, models  } from "mongoose";
 import { throwError } from "@/src/utils/errorhandler";
-
-// Define an interface for the user fields
-export interface UserUpdate {
-  name: string;
-  email: string;
-  normEmail?:string;
-  password: string;
-  mobile?: string;
-  gender: 1 | 2 | 3;
-  birthDate?: string;
-  age?:number;
-  role: 1 | 2 | 3;
-  archived?: boolean;
-  createdAt?: Date; 
-  updatedAt?: Date;
-}
+import { UserUpdate } from "../interface/userInterface";
 
 export async function calculateAge(birthDate: string): Promise<number> {
   if (typeof birthDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
@@ -38,7 +23,6 @@ export async function calculateAge(birthDate: string): Promise<number> {
   return isBeforeBirthday ? age - 1 : age;
 }
 
-
 const userSchema = new Schema<UserUpdate>({
   name: { type: String, required: true },
   email: { type: String, required: true,match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/},
@@ -48,9 +32,10 @@ const userSchema = new Schema<UserUpdate>({
   gender : { type: Number, enum: [1,2,3], required: true }, 
   birthDate : { type: Date, required: true },
   age: { type: Number },
-  role: { type: Number, enum: [1,2,3], required: true }, // Position - owner , admin ,user
   archived : { type: Boolean, default: false },
 },{ timestamps: true});
+
+
 
 const User = models.User || model("User", userSchema);
 
