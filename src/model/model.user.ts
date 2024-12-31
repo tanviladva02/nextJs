@@ -72,12 +72,7 @@ const userSchema = new Schema<UserUpdate>({
   },
   birthDate: { type: Date, required: true },
   age: { type: Number },
-  archived: { type: Boolean, default: false },
-  role: {
-    type: String,
-    enum: ["USER", "OWNER", "ADMIN"], // Valid roles
-    select:false
-  },
+  archived: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Compile the User model or use an existing one

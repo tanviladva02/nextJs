@@ -1,3 +1,5 @@
+// import mongoose from "mongoose";
+
 export interface UserUpdate {
     name: string;
     email: string;
@@ -7,8 +9,19 @@ export interface UserUpdate {
     gender: 1 | 2 | 3;
     birthDate?: string;
     age?:number;
-    role: "user" | "owner" | "admin";
+    role: "USER" | "OWNER" | "ADMIN";
     archived?: boolean;
     createdAt?: Date; 
     updatedAt?: Date;
   }
+
+  // export interface User {
+  //   userId: string;
+  //   role: string;
+  // }
+  
+  // export interface IUser extends Document {
+  //   _id: mongoose.Types.ObjectId;
+  //   role: "USER" | "OWNER" | "ADMIN";
+  //   name?: string;
+  // }

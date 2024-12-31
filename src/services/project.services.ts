@@ -3,15 +3,11 @@ import { ObjectId } from "mongodb";
 import User from "@/src/model/model.user";
 import { throwError } from "@/src/utils/errorhandler";
 import mongoose from "mongoose";
-// import { NextApiRequest } from "next";
-// import { UserRole } from "@/src/model/model.project";
 import {  validateProject } from "../utils/validation";
-// import { UserUpdate } from "../interface/userInterface";
-
-interface User {
-  userId: string;
-  role: string;
-}
+// interface User {
+//   userId: string;
+//   role: string;
+// }
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -41,7 +37,6 @@ export async function POST(
 
     // Check if createdBy is already part of the users, if not, add it as OWNER
     const userIsAlreadyPresent = users.some((user) => user.userId === createdBy);
-
     const newUsers = userIsAlreadyPresent?[...users] :[...users,{userId : createdBy,role:"OWNER"}];
 
     const newProject = new Project({
@@ -53,7 +48,6 @@ export async function POST(
             userId: new ObjectId(user.userId),
             role: user.role,
         })),
-        // users:newUsers,
         dueDate,
     });
 
@@ -74,40 +68,75 @@ export async function POST(
 
 export async function GET(): Promise<unknown[] | undefined> {
   try {
+    console.time("abc");
     const aggregationPipeline: mongoose.PipelineStage[] = [
       {
         $lookup: {
-          from: "users", // Look up the users collection
+          from: "users", // Lookup users collection for project users
           localField: "users.userId",
           foreignField: "_id",
           as: "userDetails",
         },
       },
       {
-        // Unwind the userDetails array to merge user data with project data
+        $lookup: {
+          from: "users", // Lookup users collection for createdBy user
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdByDetails",
+        },
+      },
+      {
         $unwind: {
-          path: "$userDetails",
+          path: "$createdByDetails", // Unwind createdByDetails to access individual fields
           preserveNullAndEmptyArrays: true,
         },
       },
       {
-        // Project necessary fields to include users and userDetails
         $project: {
           name: 1,
           status: 1,
+          archived: 1,
           dueDate: 1,
-          users: 1,
-          "userDetails._id": 1,
-          "userDetails.name": 1,
-          "userDetails.role":1,
-          createdBy: 1,
           createdAt: 1,
           updatedAt: 1,
-          archived: 1,
+          createdBy: {
+            id: "$createdByDetails._id",
+            name: "$createdByDetails.name",
+            email:"$createdByDetails.email",
+            role: "OWNER", // Include role for createdBy byDefault
+          },
+          users: {
+            $map: { // iterate over the user's array
+              input: "$users", // Map over users array
+              as: "user",
+              in: {
+                userId: "$$user.userId",
+                role: "$$user.role",
+                userDetails: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$userDetails", // Filter userDetails to match current userId
+                        as: "details",
+                        cond: { $eq: ["$$details._id", "$$user.userId"] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
         },
       },
       {
-        // Group the data back together and reconstruct the users array
+        $unwind: {
+          path: "$users", // Unwind users to format the array
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
         $group: {
           _id: "$_id",
           name: { $first: "$name" },
@@ -121,38 +150,17 @@ export async function GET(): Promise<unknown[] | undefined> {
             $push: {
               userId: "$users.userId",
               role: "$users.role",
-              userDetails: "$userDetails",
+              name: "$users.userDetails.name",
+              email: "$users.userDetails.email",
             },
           },
         },
       },
       {
-        // Ensure user details are properly mapped and handle createdBy field
-        $addFields: {
-          users: {
-            $map: {
-              input: "$users",
-              as: "user",
-              in: {
-                userId: "$$user.userId",
-                role: "$$user.role",
-                userDetails: {
-                  name: {
-                    $cond: {
-                      if: { $eq: ["$$user.userId", "$createdBy"] },
-                      then: { $ifNull: ["$$user.userDetails.name", "Created By"] },
-                      else: "$$user.userDetails.name",
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
+        $sort: { createdAt: -1 },
       },
     ];
-
-    // Execute the aggregation pipeline
+    console.timeEnd("abc");
     const projects = await Project.aggregate(aggregationPipeline).exec();
     return projects;
   } catch (error: unknown) {
@@ -177,7 +185,7 @@ export async function PUT(
 ) {
   try {
     // Fetch the project to get the user details
-    const project = await Project.findById(projectId).select('users createdBy');
+    const project = await Project.findById(projectId).select('users createdBy'); // will only give users and createdBy detail
     if (!project) throw new Error('Project not found');
 
     // Check if updatedBy is either the creator or in the users array
