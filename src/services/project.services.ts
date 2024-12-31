@@ -4,11 +4,6 @@ import User from "@/src/model/model.user";
 import { throwError } from "@/src/utils/errorhandler";
 import mongoose from "mongoose";
 import {  validateProject } from "../utils/validation";
-// interface User {
-//   userId: string;
-//   role: string;
-// }
-
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   role: "USER" | "OWNER" | "ADMIN";
@@ -193,6 +188,130 @@ export async function GET(): Promise<unknown[] | undefined> {
     }
   }
 }
+
+// export async function GET(): Promise<unknown[] | undefined> {
+//   try {
+//     console.time("abc");
+
+//     const aggregationPipeline: mongoose.PipelineStage[] = [
+//       // Consolidating lookup for users, createdBy, and updatedBy in one stage
+//       {
+//         $lookup: {
+//           from: "users",
+//           let: { userIds: "$users.userId", createdById: "$createdBy", updatedById: "$updatedBy" },
+//           pipeline: [
+//             {
+//               $match: {
+//                 $expr: {
+//                   $in: ["$_id", { $concatArrays: ["$$userIds", ["$$createdById", "$$updatedById"]] }],
+//                 },
+//               },
+//             },
+//             {
+//               $project: { _id: 1, name: 1, email: 1 },
+//             },
+//           ],
+//           as: "userDetails",
+//         },
+//       },
+
+//       // Add userDetails for createdBy and updatedBy as separate fields
+//       {
+//         $addFields: {
+//           createdByDetails: {
+//             $arrayElemAt: [
+//               {
+//                 $filter: {
+//                   input: "$userDetails",
+//                   as: "user",
+//                   cond: { $eq: ["$$user._id", "$createdBy"] },
+//                 },
+//               },
+//               0,
+//             ],
+//           },
+//           updatedByDetails: {
+//             $arrayElemAt: [
+//               {
+//                 $filter: {
+//                   input: "$userDetails",
+//                   as: "user",
+//                   cond: { $eq: ["$$user._id", "$updatedBy"] },
+//                 },
+//               },
+//               0,
+//             ],
+//           },
+//         },
+//       },
+
+//       // Project the desired fields for final output
+//       {
+//         $project: {
+//           name: 1,
+//           status: 1,
+//           archived: 1,
+//           dueDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+//           createdBy: {
+//             id: "$createdByDetails._id",
+//             name: "$createdByDetails.name",
+//             email: "$createdByDetails.email",
+//             role: "OWNER", // Set role for createdBy by default
+//           },
+//           updatedBy: {
+//             id: "$updatedByDetails._id",
+//             name: "$updatedByDetails.name",
+//             email: "$updatedByDetails.email",
+//             role: "OWNER", // Set role for updatedBy by default
+//           },
+//           users: {
+//             $map: {
+//               input: "$users",
+//               as: "user",
+//               in: {
+//                 userId: "$$user.userId",
+//                 role: "$$user.role",
+//                 userDetails: {
+//                   $arrayElemAt: [
+//                     {
+//                       $filter: {
+//                         input: "$userDetails",
+//                         as: "details",
+//                         cond: { $eq: ["$$details._id", "$$user.userId"] },
+//                       },
+//                     },
+//                     0,
+//                   ],
+//                 },
+//               },
+//             },
+//           },
+//         },
+//       },
+
+//       // Sorting by createdAt in descending order
+//       {
+//         $sort: { createdAt: -1 },
+//       },
+//     ];
+
+//     console.timeEnd("abc");
+
+//     const projects = await Project.aggregate(aggregationPipeline).exec();
+//     return projects;
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error fetching projects:", error.message);
+//       throwError(error.message || "Error fetching projects", 500);
+//     } else {
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
+
 
 export async function PUT(
   projectId: string,
