@@ -118,17 +118,17 @@ export async function GET(): Promise<unknown[] | undefined> {
             id: "$createdByDetails._id",
             name: "$createdByDetails.name",
             email: "$createdByDetails.email",
-            role: "OWNER", // Include role for createdBy by default
+            role: "OWNER", 
           },
           updatedBy: {
             id: "$updatedByDetails._id",
             name: "$updatedByDetails.name",
             email: "$updatedByDetails.email",
-            role: "OWNER", // Include role for createdBy by default
+            role: "OWNER", 
           },
           users: {
             $map: { // iterate over the user's array
-              input: "$users", // Map over users array
+              input: "$users", 
               as: "user",
               in: {
                 userId: "$$user.userId",
@@ -141,8 +141,7 @@ export async function GET(): Promise<unknown[] | undefined> {
                         as: "details",
                         cond: { $eq: ["$$details._id", "$$user.userId"] },
                       },
-                    },
-                    0,
+                    },0,
                   ],
                 },
               },
@@ -181,7 +180,6 @@ export async function GET(): Promise<unknown[] | undefined> {
         $sort: { createdAt: -1 },
       },
     ];
-
     console.timeEnd("abc");
     const projects = await Project.aggregate(aggregationPipeline).exec();
     return projects;
