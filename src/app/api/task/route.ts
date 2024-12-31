@@ -1,24 +1,10 @@
-// import { createTask, getTasks, updateTask } from "@/src/controller/task.controller";
-
-// export async function POST(req: Request) {
-//   return await createTask(req);
-// }
-
-// export async function GET() {
-//   return await getTasks();
-// }
-
-// export async function PUT(req: Request) {
-//   return await updateTask(req);
-// }
-
-
 import { NextResponse } from "next/server";
 import * as taskService from "@/src/services/task.services";
 import { throwError } from "@/src/utils/errorhandler";
 import connectToDatabase from "@/src/utils/db";
 
-export async function POST(req: Request) {
+// creating post route for adding task.
+export async function POST(req: Request): Promise<NextResponse<{ message: string; result: unknown; }> | undefined> {
   try {
     await connectToDatabase();
     const taskData = await req.json();
@@ -35,7 +21,8 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+// creating get route for fetching all tasks.
+export async function GET(): Promise<NextResponse<{ message: string; tasks: unknown[] | undefined; }> | undefined> {
   try {
     await connectToDatabase();
     const tasks = await taskService.getTasks();
@@ -51,7 +38,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: Request): Promise<NextResponse<{ message: string; updatedTask: unknown; }> | undefined> {
   try {
     await connectToDatabase();
     const url = new URL(req.url);

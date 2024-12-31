@@ -1,17 +1,16 @@
-import User, { calculateAge } from "@/src/model/model.user";
+import User, { DateUtils } from "@/src/model/model.user";
 import { UserUpdate } from "../interface/userInterface";
 import bcrypt from "bcrypt";
 import { throwError } from "@/src/utils/errorhandler";
-// import connectToDatabase from "@/src/utils/db";
 import {validateUser} from "@/src/utils/validation";
 
-export async function addUser(data: UserUpdate) {
+export async function addUser(data: UserUpdate): Promise<unknown> {
   try {
-    // await connectToDatabase();
     const { name, email, password, mobile, gender, birthDate } = data;
+    // validateUser(data); - if i will add validation here age will came undefined.
 
     const normEmail = email.toLowerCase();
-    const age = await calculateAge(birthDate as string);
+    const age = DateUtils.calculateAge(birthDate as string);
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = new User({
@@ -25,10 +24,8 @@ export async function addUser(data: UserUpdate) {
       age,
       archived: false
     });
-  
 
     validateUser(newUser);
-
     await newUser.save();
     return newUser;
   }  catch (error: unknown) {
@@ -43,14 +40,13 @@ export async function addUser(data: UserUpdate) {
   }
 }
 
-export async function getAllUsers() {
+export async function getAllUsers(): Promise<unknown[] | undefined> {
   try {
-    // await connectToDatabase();
     const users = await User.find({});
-    if (users.length === 0) {
+    if (users.length === 0) { // check if user is available in database or not.
       throwError("No users found", 404);
     }
-    return users;
+    return users; // if users has in database then return users data.
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);
@@ -63,21 +59,20 @@ export async function getAllUsers() {
   }
 }
 
-export async function updateUser(id: string, data: Partial<UserUpdate>) {
-  try {
-    // await connectToDatabase();
-    const updateFields: Partial<UserUpdate> = { ...data };
+export async function updateUser(id: string, data: Partial<UserUpdate>): Promise<unknown> {
+  try { // partial - make sure that all feilds are not required while updating , so it make interface feilds optional. 
+    const updateFields: Partial<UserUpdate> = { ...data }; // will make optional feilds while updating.
 
     if (updateFields.password) {
       updateFields.password = await bcrypt.hash(updateFields.password, 10);
     }
 
-    const result = await User.updateOne({ _id: id }, { $set: updateFields });
+    const result = await User.updateOne({ _id: id }, { $set: updateFields }); // id has to match with existing user's id in database and after finding that $set will update that user's data.
     if (result.matchedCount === 0) {
       throwError("User not found.", 404);
     }
 
-    return User.findById(id);
+    return User.findById(id); // will returned updated user's data.
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);

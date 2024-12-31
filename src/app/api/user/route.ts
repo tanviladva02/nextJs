@@ -1,13 +1,8 @@
-// import { handlePost, handleGet, handlePut } from "@/src/controller/user.controller";
-
-// export const POST = handlePost;
-// export const GET = handleGet;
-// export const PUT = handlePut;
 import { addUser, getAllUsers, updateUser } from "@/src/services/user.services";
 import connectToDatabase from "@/src/utils/db";
 import { throwError } from "@/src/utils/errorhandler";
 
-export async function POST(req: Request) {
+export async function POST(req: Request): Promise<Response | undefined> {
   try {
     await connectToDatabase();
     const data = await req.json();
@@ -25,7 +20,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(): Promise<Response | undefined> {
   try {
     await connectToDatabase();
     const users = await getAllUsers();
@@ -41,7 +36,7 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: Request): Promise<Response | undefined> {
   try {
     await connectToDatabase();
     const url = new URL(req.url);

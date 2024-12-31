@@ -4,20 +4,16 @@ import Project from "@/src/model/model.project";
 import User from "@/src/model/model.user";
 import { ObjectId } from "mongodb";
 import { throwError } from "@/src/utils/errorhandler";
-// import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose"; 
 import { validateTask } from "../utils/validation";
 
-export async function createTask(taskData: TaskData) {
+export async function createTask(taskData: TaskData): Promise<unknown> {
   try {
-    // await connectToDatabase();
     const { name, priority, status, createdBy, users, dueDate, projectId } = taskData;
-    console.log(taskData);
     validateTask(taskData);
-
     const userIds = users.map((user: { userId: string }) => user.userId);
-
     const validProject = await Project.findById(projectId);
+
     if (!validProject) throwError("Invalid projectId.", 400);
 
     const newTask = new Task({
@@ -45,9 +41,8 @@ export async function createTask(taskData: TaskData) {
   }
 }
 
-export async function getTasks() {
+export async function getTasks(): Promise<unknown[] | undefined> {
   try {
-    // await connectToDatabase();
     const aggregationPipeline : mongoose.PipelineStage[] = [
       { $match: { archived: false } },
       {
@@ -93,10 +88,8 @@ export async function getTasks() {
   }
 }
 
-export async function updateTask(id: string, taskData: TaskData) {
+export async function updateTask(id: string, taskData: TaskData): Promise<unknown> {
   try {
-
-    // await connectToDatabase();
     const { name, priority, status, archived, updatedBy, users, dueDate, projectId } = taskData;
 
     // if (projectId) {
@@ -130,7 +123,7 @@ export async function updateTask(id: string, taskData: TaskData) {
 
     if (result.matchedCount === 0) throwError("Task not found", 404);
 
-    return await Task.findOne({ _id: new ObjectId(id) });
+    return await Task.findOne({ _id: new ObjectId(id) }); // will return updated task data finding through id.
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);

@@ -7,7 +7,7 @@ export interface UserUpdate {
     gender: 1 | 2 | 3;
     birthDate?: string;
     age?:number;
-    role: 1 | 2 | 3;
+    role: "user" | "owner" | "admin";
     archived?: boolean;
     createdAt?: Date; 
     updatedAt?: Date;
