@@ -87,8 +87,22 @@ export async function GET(): Promise<unknown[] | undefined> {
         },
       },
       {
+        $lookup:{
+          from:"users",
+          localField:"updatedBy",
+          foreignField:"_id",
+          as:"updatedByDetails",
+        }
+      },
+      {
         $unwind: {
-          path: "$createdByDetails", // Unwind createdByDetails to access individual fields
+          path: "$createdByDetails", 
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: "$updatedByDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -103,8 +117,14 @@ export async function GET(): Promise<unknown[] | undefined> {
           createdBy: {
             id: "$createdByDetails._id",
             name: "$createdByDetails.name",
-            email:"$createdByDetails.email",
-            role: "OWNER", // Include role for createdBy byDefault
+            email: "$createdByDetails.email",
+            role: "OWNER", // Include role for createdBy by default
+          },
+          updatedBy: {
+            id: "$updatedByDetails._id",
+            name: "$updatedByDetails.name",
+            email: "$updatedByDetails.email",
+            role: "OWNER", // Include role for createdBy by default
           },
           users: {
             $map: { // iterate over the user's array
@@ -146,6 +166,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           createdAt: { $first: "$createdAt" },
           updatedAt: { $first: "$updatedAt" },
           createdBy: { $first: "$createdBy" },
+          updatedBy: { $first: "$updatedBy" }, // Include updatedBy in the group stage
           users: {
             $push: {
               userId: "$users.userId",
@@ -160,6 +181,7 @@ export async function GET(): Promise<unknown[] | undefined> {
         $sort: { createdAt: -1 },
       },
     ];
+
     console.timeEnd("abc");
     const projects = await Project.aggregate(aggregationPipeline).exec();
     return projects;
@@ -179,7 +201,7 @@ export async function PUT(
   name?: string,
   status?: number,
   archived?: boolean,
-  updatedBy?: string,
+  updatedBy?: string, // Add updatedBy as an optional parameter
   users?: { userId: string; role: string }[],
   dueDate?: Date
 ) {
@@ -198,7 +220,7 @@ export async function PUT(
     const role = isCreator ? 'OWNER' : userInProject ? userInProject.role : null;
 
     if (!role || !['OWNER', 'ADMIN'].includes(role)) {
-      throwError("unauthorized user",401);
+      throwError("unauthorized user", 401);
     }
 
     // Prepare the fields to update
@@ -219,6 +241,11 @@ export async function PUT(
       }));
     }
 
+    // Add updatedBy to the fields to update
+    if (updatedBy) {
+      updateFields.updatedBy = new mongoose.Types.ObjectId(updatedBy);
+    }
+
     // Update the project in the database
     const result = await Project.findByIdAndUpdate(
       projectId,
@@ -229,11 +256,13 @@ export async function PUT(
     return result;
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error fetching projects:", error.message);
-      throwError(error.message || "Error fetching projects", 500);
+      console.error("Error updating project:", error.message);
+      throwError(error.message || "Error updating project", 500);
     } else {
       console.error("An unknown error occurred");
       throwError("Unknown error", 500);
     }
   }
 }
+
+
