@@ -10,6 +10,55 @@ export interface IUser extends Document {
   name?: string;
 }
 
+// export async function POST(
+//   name: string,
+//   status: number,
+//   createdBy: string,
+//   users: Array<{ userId: string; role: string }>,
+//   dueDate: Date,
+//   archived?: boolean
+// ): Promise<unknown> {
+//   try {
+//     console.log("POST function is called");
+
+//     const userIds = users.map((user) => user.userId);
+
+//     // Validate userIds (check if the users exist)
+//     const validUsers = await User.find({ _id: { $in: [...userIds, createdBy] } });
+//     if (validUsers.length !== userIds.length + 1) {
+//       throwError("One or more userIds are invalid.", 400);
+//     }
+
+//     // Check if createdBy is already part of the users, if not, add it as OWNER
+//     const userIsAlreadyPresent = users.some((user) => user.userId === createdBy);
+//     const newUsers = userIsAlreadyPresent?[...users] :[...users,{userId : createdBy,role:"OWNER"}];
+
+//     const newProject = new Project({
+//         name,
+//         status,
+//         archived: archived ?? false,
+//         createdBy: new ObjectId(createdBy),
+//         users: newUsers.map((user) => ({
+//             userId: new ObjectId(user.userId),
+//             role: user.role,
+//         })),
+//         dueDate,
+//     });
+
+//     // Validate the project object before saving
+//     validateProject(newProject);
+
+//     return await newProject.save();
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error adding project:", error.message);
+//       throwError(error.message || "Error adding project", 500);
+//     } else {
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
 
 export async function POST(
   name: string,
@@ -22,34 +71,48 @@ export async function POST(
   try {
     console.log("POST function is called");
 
+    // Extract user IDs from the users array
     const userIds = users.map((user) => user.userId);
 
-    // Validate userIds (check if the users exist)
+    // Validate if all user IDs, including createdBy, exist in the User collection
     const validUsers = await User.find({ _id: { $in: [...userIds, createdBy] } });
     if (validUsers.length !== userIds.length + 1) {
       throwError("One or more userIds are invalid.", 400);
     }
 
-    // Check if createdBy is already part of the users, if not, add it as OWNER
+    // Ensure createdBy is added as OWNER if not already present
     const userIsAlreadyPresent = users.some((user) => user.userId === createdBy);
-    const newUsers = userIsAlreadyPresent?[...users] :[...users,{userId : createdBy,role:"OWNER"}];
 
+    // If createdBy is not already in users array, add it as OWNER (first in the list)
+    if (!userIsAlreadyPresent) {
+      users.unshift({ userId: createdBy, role: "OWNER" }); // Add 'createdBy' at the start
+    }
+
+    // Map users to include ObjectId for MongoDB compatibility
+    const formattedUsers = users.map((user) => ({
+      userId: new ObjectId(user.userId),
+      role: user.role,
+    }));
+
+    // Create a new project object
     const newProject = new Project({
-        name,
-        status,
-        archived: archived ?? false,
-        createdBy: new ObjectId(createdBy),
-        users: newUsers.map((user) => ({
-            userId: new ObjectId(user.userId),
-            role: user.role,
-        })),
-        dueDate,
+      name,
+      status,
+      archived: archived ?? false,
+      createdBy: new ObjectId(createdBy),
+      users: formattedUsers, // Add all users including createdBy as OWNER
+      dueDate,
     });
 
-    // Validate the project object before saving
+    // Optional: Validate the project object before saving (if you have validation logic)
     validateProject(newProject);
 
-    return await newProject.save();
+    // Save the project to the database
+    const savedProject = await newProject.save();
+
+    console.log("Project successfully created:", savedProject);
+
+    return savedProject;
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding project:", error.message);
@@ -63,7 +126,7 @@ export async function POST(
 
 export async function GET(): Promise<unknown[] | undefined> {
   try {
-    console.time("abc");
+    console.time("GET");
     const aggregationPipeline: mongoose.PipelineStage[] = [
       {
         $lookup: {
@@ -82,16 +145,16 @@ export async function GET(): Promise<unknown[] | undefined> {
         },
       },
       {
-        $lookup:{
-          from:"users",
-          localField:"updatedBy",
-          foreignField:"_id",
-          as:"updatedByDetails",
-        }
+        $lookup: {
+          from: "users", // Lookup users collection for updatedBy user
+          localField: "updatedBy",
+          foreignField: "_id",
+          as: "updatedByDetails",
+        },
       },
       {
         $unwind: {
-          path: "$createdByDetails", 
+          path: "$createdByDetails",
           preserveNullAndEmptyArrays: true,
         },
       },
@@ -113,17 +176,35 @@ export async function GET(): Promise<unknown[] | undefined> {
             id: "$createdByDetails._id",
             name: "$createdByDetails.name",
             email: "$createdByDetails.email",
-            role: "OWNER", 
+            role: "OWNER", // Always set the createdBy as OWNER
           },
           updatedBy: {
             id: "$updatedByDetails._id",
             name: "$updatedByDetails.name",
             email: "$updatedByDetails.email",
-            role: "OWNER", 
+            role: {
+              $let: {
+                vars: {
+                  updatedUser: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: "$users", // Filter the project's users array
+                          as: "user",
+                          cond: { $eq: ["$$user.userId", "$updatedBy"] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                },
+                in: "$$updatedUser.role", // Get the role from the filtered user
+              },
+            },
           },
           users: {
-            $map: { // iterate over the user's array
-              input: "$users", 
+            $map: {
+              input: "$users", // Iterate over the users array
               as: "user",
               in: {
                 userId: "$$user.userId",
@@ -136,7 +217,8 @@ export async function GET(): Promise<unknown[] | undefined> {
                         as: "details",
                         cond: { $eq: ["$$details._id", "$$user.userId"] },
                       },
-                    },0,
+                    },
+                    0,
                   ],
                 },
               },
@@ -172,10 +254,12 @@ export async function GET(): Promise<unknown[] | undefined> {
         },
       },
       {
-        $sort: { createdAt: -1 },
+        $sort: { createdAt: -1 }, // Sort projects by creation date (desc)
       },
     ];
-    console.timeEnd("abc");
+
+    console.timeEnd("GET");
+
     const projects = await Project.aggregate(aggregationPipeline).exec();
     return projects;
   } catch (error: unknown) {
@@ -188,130 +272,6 @@ export async function GET(): Promise<unknown[] | undefined> {
     }
   }
 }
-
-// export async function GET(): Promise<unknown[] | undefined> {
-//   try {
-//     console.time("abc");
-
-//     const aggregationPipeline: mongoose.PipelineStage[] = [
-//       // Consolidating lookup for users, createdBy, and updatedBy in one stage
-//       {
-//         $lookup: {
-//           from: "users",
-//           let: { userIds: "$users.userId", createdById: "$createdBy", updatedById: "$updatedBy" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $in: ["$_id", { $concatArrays: ["$$userIds", ["$$createdById", "$$updatedById"]] }],
-//                 },
-//               },
-//             },
-//             {
-//               $project: { _id: 1, name: 1, email: 1 },
-//             },
-//           ],
-//           as: "userDetails",
-//         },
-//       },
-
-//       // Add userDetails for createdBy and updatedBy as separate fields
-//       {
-//         $addFields: {
-//           createdByDetails: {
-//             $arrayElemAt: [
-//               {
-//                 $filter: {
-//                   input: "$userDetails",
-//                   as: "user",
-//                   cond: { $eq: ["$$user._id", "$createdBy"] },
-//                 },
-//               },
-//               0,
-//             ],
-//           },
-//           updatedByDetails: {
-//             $arrayElemAt: [
-//               {
-//                 $filter: {
-//                   input: "$userDetails",
-//                   as: "user",
-//                   cond: { $eq: ["$$user._id", "$updatedBy"] },
-//                 },
-//               },
-//               0,
-//             ],
-//           },
-//         },
-//       },
-
-//       // Project the desired fields for final output
-//       {
-//         $project: {
-//           name: 1,
-//           status: 1,
-//           archived: 1,
-//           dueDate: 1,
-//           createdAt: 1,
-//           updatedAt: 1,
-//           createdBy: {
-//             id: "$createdByDetails._id",
-//             name: "$createdByDetails.name",
-//             email: "$createdByDetails.email",
-//             role: "OWNER", // Set role for createdBy by default
-//           },
-//           updatedBy: {
-//             id: "$updatedByDetails._id",
-//             name: "$updatedByDetails.name",
-//             email: "$updatedByDetails.email",
-//             role: "OWNER", // Set role for updatedBy by default
-//           },
-//           users: {
-//             $map: {
-//               input: "$users",
-//               as: "user",
-//               in: {
-//                 userId: "$$user.userId",
-//                 role: "$$user.role",
-//                 userDetails: {
-//                   $arrayElemAt: [
-//                     {
-//                       $filter: {
-//                         input: "$userDetails",
-//                         as: "details",
-//                         cond: { $eq: ["$$details._id", "$$user.userId"] },
-//                       },
-//                     },
-//                     0,
-//                   ],
-//                 },
-//               },
-//             },
-//           },
-//         },
-//       },
-
-//       // Sorting by createdAt in descending order
-//       {
-//         $sort: { createdAt: -1 },
-//       },
-//     ];
-
-//     console.timeEnd("abc");
-
-//     const projects = await Project.aggregate(aggregationPipeline).exec();
-//     return projects;
-//   } catch (error: unknown) {
-//     if (error instanceof Error) {
-//       console.error("Error fetching projects:", error.message);
-//       throwError(error.message || "Error fetching projects", 500);
-//     } else {
-//       console.error("An unknown error occurred");
-//       throwError("Unknown error", 500);
-//     }
-//   }
-// }
-
 
 export async function PUT(
   projectId: string,
@@ -381,5 +341,3 @@ export async function PUT(
     }
   }
 }
-
-
