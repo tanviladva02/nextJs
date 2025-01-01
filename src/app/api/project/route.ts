@@ -21,10 +21,13 @@ export async function POST(req: Request): Promise<NextResponse<{ message: string
   }
 }
 
-export async function GET(): Promise<NextResponse<{ message: string; projects: unknown[] | undefined; }> | undefined>{
+export async function GET(req: {url: string | URL; query: { projectId: string; };}): Promise<NextResponse<{ message: string; projects: unknown[] | undefined; }> | undefined>{
   try {
     await connectToDatabase();
-    const projects = await getProjectsService();
+    const url = new URL(req.url);
+    const userId = url.searchParams.get("userId");
+    console.log("userId",userId);
+    const projects = await getProjectsService(userId as string);
     return NextResponse.json({ message: "Projects fetched successfully!", projects });
   } catch (error: unknown) {
     if (error instanceof Error) {

@@ -124,10 +124,172 @@ export async function POST(
   }
 }
 
-export async function GET(): Promise<unknown[] | undefined> {
+// export async function GET(userId:string): Promise<unknown[] | undefined> {
+//   try {
+//     console.time("GET");
+
+//     const matchStage: mongoose.PipelineStage = userId
+//           ? { $match: { userId: new mongoose.Types.ObjectId(userId), archived: false } }
+//           : { $match: { archived: false } };
+//     const aggregationPipeline: mongoose.PipelineStage[] = [
+//       matchStage,
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "createdBy",
+//           foreignField: "_id",
+//           as: "createdByDetails",
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 email: 1,
+//                 role: "OWNER",
+//               },
+//             },
+//           ],
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$createdByDetails",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "updatedBy",
+//           foreignField: "_id",
+//           as: "updatedByDetails",
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 email: 1,
+//                 role: 1,
+//               },
+//             },
+//           ],
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$updatedByDetails",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $addFields: {
+//           "updatedByDetails.role": {
+//             $arrayElemAt: [
+//               "$users.role",
+//               {
+//                 $indexOfArray: ["$users.userId", "$updatedBy"],
+//               },
+//             ],
+//           },
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$users",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "users.userId",
+//           foreignField: "_id",
+//           as: "userDetails",
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 email: 1,
+//                 role: 1,
+//               },
+//             },
+//           ],
+//         },
+//       },
+//       {
+//         $unwind: {
+//           path: "$userDetails",
+//           preserveNullAndEmptyArrays: true,
+//         },
+//       },
+      
+      
+//       {
+//         $group: {
+//           _id: "$_id",
+//           name: { $first: "$name" },
+//           status: { $first: "$status" },
+//           archived: { $first: "$archived" },
+//           dueDate: { $first: "$dueDate" },
+//           createdAt: { $first: "$createdAt" },
+//           updatedAt: { $first: "$updatedAt" },
+//           createdByDetails: { $first: "$createdByDetails" },
+//           updatedByDetails: { $first: "$updatedByDetails" },
+//           users: {
+//             $push: {
+//               userId: "$userDetails._id",
+//               name: "$userDetails.name",
+//               email: "$userDetails.email",
+//               role: "$users.role",
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $project: {
+//           name: 1,
+//           status: 1,
+//           archived: 1,
+//           dueDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+//           users: 1,
+//           createdByDetails: 1,
+//           updatedByDetails: 1,
+//         },
+//       },
+//       {
+//         $sort: { createdAt: -1 }, // Sort projects by creation date (desc)
+//       },
+//     ];
+
+//     console.timeEnd("GET");
+
+//     const projects = await Project.aggregate(aggregationPipeline).exec();
+//     return projects;
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error fetching projects:", error.message);
+//       throwError(error.message || "Error fetching projects", 500);
+//     } else {
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
+
+export async function GET(userId: string): Promise<unknown[] | undefined> {
   try {
     console.time("GET");
+
+    const matchStage: mongoose.PipelineStage = userId
+      ? { $match: { "users.userId": new mongoose.Types.ObjectId(userId), archived: false } }
+      : { $match: { archived: false } };
+
     const aggregationPipeline: mongoose.PipelineStage[] = [
+      matchStage,
+      // Lookup for createdBy user details
       {
         $lookup: {
           from: "users",
@@ -152,6 +314,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           preserveNullAndEmptyArrays: true,
         },
       },
+      // Lookup for updatedBy user details
       {
         $lookup: {
           from: "users",
@@ -176,6 +339,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           preserveNullAndEmptyArrays: true,
         },
       },
+      // Add role for updatedBy user based on users array
       {
         $addFields: {
           "updatedByDetails.role": {
@@ -188,6 +352,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           },
         },
       },
+      // Lookup for task users
       {
         $unwind: {
           path: "$users",
@@ -218,8 +383,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           preserveNullAndEmptyArrays: true,
         },
       },
-      
-      
+      // Group by task ID and collect user details
       {
         $group: {
           _id: "$_id",
@@ -241,6 +405,7 @@ export async function GET(): Promise<unknown[] | undefined> {
           },
         },
       },
+      // Project stage to shape the output
       {
         $project: {
           name: 1,
@@ -254,13 +419,13 @@ export async function GET(): Promise<unknown[] | undefined> {
           updatedByDetails: 1,
         },
       },
-      {
-        $sort: { createdAt: -1 }, // Sort projects by creation date (desc)
-      },
+      // Sort by createdAt descending (ensure sorting happens at the end)
+      { $sort: { createdAt: -1 } },
     ];
 
     console.timeEnd("GET");
 
+    // Run aggregation pipeline to fetch tasks
     const projects = await Project.aggregate(aggregationPipeline).exec();
     return projects;
   } catch (error: unknown) {
@@ -273,6 +438,7 @@ export async function GET(): Promise<unknown[] | undefined> {
     }
   }
 }
+
 
 export async function PUT(
   projectId: string,
