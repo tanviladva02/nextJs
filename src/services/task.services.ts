@@ -6,14 +6,61 @@ import { ObjectId } from "mongodb";
 import { throwError } from "@/src/utils/errorhandler";
 import mongoose from "mongoose"; 
 import { validateTask } from "../utils/validation";
+// import {parse} from "url";
+// import { useRouter } from 'next/router';
+// import { IncomingMessage } from "http";
+
+// export async function createTask(taskData: TaskData): Promise<unknown> {
+//   try {
+//     const { name, priority, status, createdBy, users, dueDate, projectId } = taskData;
+//     validateTask(taskData);
+//     const userIds = users.map((user: { userId: string }) => user.userId);
+//     const validProject = await Project.findById(projectId);
+
+//     if (!validProject) throwError("Invalid projectId.", 400);
+
+//     const newTask = new Task({
+//       name,
+//       priority,
+//       status,
+//       createdBy: new ObjectId(createdBy),
+//       users: userIds,
+//       archived: false,
+//       createdAt: new Date(),
+//       dueDate,
+//       projectId: new ObjectId(projectId),
+//     });
+
+//     return await newTask.save();
+//   }  catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error adding task:", error.message);
+//       throwError(error.message || "Error adding task", 500);
+//     } else {
+//       // In case the error is not an instance of Error
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
 
 export async function createTask(taskData: TaskData): Promise<unknown> {
   try {
     const { name, priority, status, createdBy, users, dueDate, projectId } = taskData;
     validateTask(taskData);
-    const userIds = users.map((user: { userId: string }) => user.userId);
-    const validProject = await Project.findById(projectId);
 
+    // Extract userIds from users array (which contains objects with userId field)
+    const userIds = users.map((user: { userId: string }) => user.userId);
+
+    // Fetch user details based on the extracted userIds
+    const userDetails = await User.find({ _id: { $in: userIds.map(userId => new ObjectId(userId)) } });
+
+    // // Check if all users are found (optional)
+    // if (userDetails.length !== userIds.length) {
+    //   throwError("One or more users not found.", 400);
+    // }
+
+    const validProject = await Project.findById(projectId);
     if (!validProject) throwError("Invalid projectId.", 400);
 
     const newTask = new Task({
@@ -21,7 +68,7 @@ export async function createTask(taskData: TaskData): Promise<unknown> {
       priority,
       status,
       createdBy: new ObjectId(createdBy),
-      users: userIds,
+      users: userDetails,  // Store full user objects instead of IDs
       archived: false,
       createdAt: new Date(),
       dueDate,
@@ -29,31 +76,401 @@ export async function createTask(taskData: TaskData): Promise<unknown> {
     });
 
     return await newTask.save();
-  }  catch (error: unknown) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);
       throwError(error.message || "Error adding task", 500);
     } else {
-      // In case the error is not an instance of Error
       console.error("An unknown error occurred");
       throwError("Unknown error", 500);
     }
   }
 }
 
-export async function getTasks(): Promise<unknown[] | undefined> {
+
+// export async function getTasks(projectId:string): Promise<unknown[] | undefined> {
+//   try {
+
+//     // const urlParts = parse(req.url || "", true); // Parse the URL
+//     // const projectId = urlParts.query.projectId as string; 
+//     // const {projectId} = req.query;
+//     console.log(projectId);
+//     const matchStage: mongoose.PipelineStage = projectId
+//       ? { $match: { projectId: new mongoose.Types.ObjectId(projectId as string), archived: false } }
+//       : { $match: { archived: false } };
+
+
+//     const aggregationPipeline : mongoose.PipelineStage[] = [
+//       matchStage,
+//       {
+//         $lookup:{
+//           from: 'users',
+//           localField: 'createdBy',
+//           foreignField: '_id',
+//           as: 'createdByUser',
+//           pipeline:[
+//             {
+//               $project:{
+//                 _id:1,
+//                 name:1,
+//                 email:1
+//               }
+//             }
+//           ]
+//         }
+//       },
+//       {
+//         $unwind:{
+//           path: '$createdByUser',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $lookup:{
+//           from: 'users',
+//           localField: 'updatedBy',
+//           foreignField: '_id',
+//           as: 'updatedByUser',
+//           pipeline:[
+//             {
+//               $project:{
+//                 _id:1,
+//                 name:1,
+//                 email:1
+//               }
+//             }
+//           ]
+//         }
+//       },
+//       {
+//         $unwind:{
+//           path: '$updatedByUser',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $lookup: {
+//           from: "projects",
+//           localField: "projectId",
+//           foreignField: "_id",
+//           as: "projectDetails",
+//           pipeline:[
+//             {
+//               $project:{
+//                 _id:1,
+//                 name:1,
+//                 status:1
+//               }
+//             }
+//           ]
+//         },
+//       },
+//       { 
+//         $unwind:{
+//           path:'$projectDetails',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $group:{
+//           _id: "$projectId",
+//           name:{$first:"$name"},
+//           priority:{$first:"$priority"},
+//           status:{$first:"$status"},
+//           users:{$first:"$users"},
+//           dueDate: {$first:"$dueDate"},
+//           createdAt: {$first:"$createdAt"},
+//           updatedAt: {$first:"$updatedAt"},
+//           archived: {$first:"$archived"},
+//           createdBy:{$first:"$createdByUser"},
+//           updatedBy:{$first:"$updatedBy"},
+//           project:{
+//             $push:{
+//               id:"$projectDetails._id",
+//               name:"$projectDetails.name",
+//               status:"$projectDetails.status"
+//             }
+//           }
+//         }
+//       },
+//       {
+//         $project: {
+//           name: 1,
+//           priority: 1,
+//           status: 1,
+//           users: 1,
+//           dueDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+//           archived: 1,
+//           createdBy:1,
+//           updatedBy:1,
+//           project:1
+//         },
+//       },
+//       { $sort: { createdAt: -1 } },
+//     ];
+  
+//     const tasks = await Task.aggregate(aggregationPipeline).exec();
+//     if (tasks.length === 0) throwError("No tasks found", 404);
+  
+//     return tasks;
+//   }  catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error adding task:", error.message);
+//       throwError(error.message || "Error adding task", 500);
+//     } else {
+//       // In case the error is not an instance of Error
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
+
+// export async function getTasks(projectId: string): Promise<unknown[] | undefined> {
+//   try {
+//     const matchStage: mongoose.PipelineStage = projectId
+//       ? { $match: { projectId: new mongoose.Types.ObjectId(projectId), archived: false } }
+//       : { $match: { archived: false } };
+
+//     const aggregationPipeline: mongoose.PipelineStage[] = [
+//       matchStage,
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'createdBy',
+//           foreignField: '_id',
+//           as: 'createdByUser',
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 email: 1
+//               }
+//             }
+//           ]
+//         }
+//       },
+//       {
+//         $unwind: {
+//           path: '$createdByUser',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $lookup: {
+//           from: 'users',
+//           localField: 'updatedBy',
+//           foreignField: '_id',
+//           as: 'updatedByUser',
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 email: 1
+//               }
+//             }
+//           ]
+//         }
+//       },
+//       {
+//         $unwind: {
+//           path: '$updatedByUser',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $lookup: {
+//           from: 'projects',
+//           localField: 'projectId',
+//           foreignField: '_id',
+//           as: 'projectDetails',
+//           pipeline: [
+//             {
+//               $project: {
+//                 _id: 1,
+//                 name: 1,
+//                 status: 1
+//               }
+//             }
+//           ]
+//         }
+//       },
+//       {
+//         $unwind: {
+//           path: '$projectDetails',
+//           preserveNullAndEmptyArrays: true
+//         }
+//       },
+//       {
+//         $group: {
+//           _id: "$_id", // Group by task ID to avoid duplicating
+//           name: { $first: "$name" },
+//           priority: { $first: "$priority" },
+//           status: { $first: "$status" },
+//           users: { $first: "$users" },
+//           dueDate: { $first: "$dueDate" },
+//           createdAt: { $first: "$createdAt" },
+//           updatedAt: { $first: "$updatedAt" },
+//           archived: { $first: "$archived" },
+//           createdBy: { $first: "$createdByUser" },
+//           updatedBy: { $first: "$updatedByUser" },
+//           project: { $push: { id: "$projectDetails._id", name: "$projectDetails.name", status: "$projectDetails.status" } }
+//         }
+//       },
+//       {
+//         $project: {
+//           name: 1,
+//           priority: 1,
+//           status: 1,
+//           users: 1,
+//           dueDate: 1,
+//           createdAt: 1,
+//           updatedAt: 1,
+//           archived: 1,
+//           createdBy: 1,
+//           updatedBy: 1,
+//           project: 1
+//         }
+//       },
+//       { $sort: { createdAt: -1 } }
+//     ];
+
+//     const tasks = await Task.aggregate(aggregationPipeline).exec();
+//     if (tasks.length === 0) throwError("No tasks found", 404);
+
+//     return tasks;
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error fetching tasks:", error.message);
+//       throwError(error.message || "Error fetching tasks", 500);
+//     } else {
+//       console.error("An unknown error occurred");
+//       throwError("Unknown error", 500);
+//     }
+//   }
+// }
+
+export async function getTasks(projectId: string): Promise<unknown[] | undefined> {
   try {
-    const aggregationPipeline : mongoose.PipelineStage[] = [
-      { $match: { archived: false } },
+    const matchStage: mongoose.PipelineStage = projectId
+      ? { $match: { projectId: new mongoose.Types.ObjectId(projectId), archived: false } }
+      : { $match: { archived: false } };
+
+    const aggregationPipeline: mongoose.PipelineStage[] = [
+      matchStage,
       {
         $lookup: {
-          from: "projects",
-          localField: "projectId",
-          foreignField: "_id",
-          as: "projectDetails",
-        },
+          from: 'users',
+          localField: 'createdBy',
+          foreignField: '_id',
+          as: 'createdByUser',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1
+              }
+            }
+          ]
+        }
       },
-      { $unwind: "$projectDetails" },
+      {
+        $unwind: {
+          path: '$createdByUser',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'updatedBy',
+          foreignField: '_id',
+          as: 'updatedByUser',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $unwind: {
+          path: '$updatedByUser',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'users',  // Users is an array of user IDs
+          foreignField: '_id',
+          as: 'userDetails',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $unwind: {
+          path: '$userDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'projects',
+          localField: 'projectId',
+          foreignField: '_id',
+          as: 'projectDetails',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                status: 1,
+                dueDate:1,
+                users:1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $unwind: {
+          path: '$projectDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: "$_id", // Group by task ID to avoid duplicating
+          name: { $first: "$name" },
+          priority: { $first: "$priority" },
+          status: { $first: "$status" },
+          users: { $push: "$userDetails" },  // Push full user details into 'users' array
+          dueDate: { $first: "$dueDate" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          archived: { $first: "$archived" },
+          createdBy: { $first: "$createdByUser" },
+          updatedBy: { $first: "$updatedByUser" },
+          project: { $push: { id: "$projectDetails._id", name: "$projectDetails.name", status: "$projectDetails.status" , dueDate:"$projectDetails.dueDate", users:"$projectDetails.users" } }
+        }
+      },
       {
         $project: {
           name: 1,
@@ -64,24 +481,23 @@ export async function getTasks(): Promise<unknown[] | undefined> {
           createdAt: 1,
           updatedAt: 1,
           archived: 1,
-          projectId: 1,
-          projectName: "$projectDetails.name",
-          projectStatus: "$projectDetails.status",
-        },
+          createdBy: 1,
+          updatedBy: 1,
+          project: 1
+        }
       },
-      { $sort: { createdAt: -1 } },
+      { $sort: { createdAt: -1 } }
     ];
-  
+
     const tasks = await Task.aggregate(aggregationPipeline).exec();
     if (tasks.length === 0) throwError("No tasks found", 404);
-  
+
     return tasks;
-  }  catch (error: unknown) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error adding task:", error.message);
-      throwError(error.message || "Error adding task", 500);
+      console.error("Error fetching tasks:", error.message);
+      throwError(error.message || "Error fetching tasks", 500);
     } else {
-      // In case the error is not an instance of Error
       console.error("An unknown error occurred");
       throwError("Unknown error", 500);
     }

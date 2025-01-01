@@ -130,26 +130,20 @@ export async function GET(): Promise<unknown[] | undefined> {
     const aggregationPipeline: mongoose.PipelineStage[] = [
       {
         $lookup: {
-          from: "users", // Lookup users collection for project users
-          localField: "users.userId",
-          foreignField: "_id",
-          as: "userDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "users", // Lookup users collection for createdBy user
+          from: "users",
           localField: "createdBy",
           foreignField: "_id",
           as: "createdByDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "users", // Lookup users collection for updatedBy user
-          localField: "updatedBy",
-          foreignField: "_id",
-          as: "updatedByDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: "OWNER",
+              },
+            },
+          ],
         },
       },
       {
@@ -159,9 +153,92 @@ export async function GET(): Promise<unknown[] | undefined> {
         },
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "updatedBy",
+          foreignField: "_id",
+          as: "updatedByDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
         $unwind: {
           path: "$updatedByDetails",
           preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          "updatedByDetails.role": {
+            $arrayElemAt: [
+              "$users.role",
+              {
+                $indexOfArray: ["$users.userId", "$updatedBy"],
+              },
+            ],
+          },
+        },
+      },
+      {
+        $unwind: {
+          path: "$users",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "users.userId",
+          foreignField: "_id",
+          as: "userDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: "$userDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      
+      
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          status: { $first: "$status" },
+          archived: { $first: "$archived" },
+          dueDate: { $first: "$dueDate" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          createdByDetails: { $first: "$createdByDetails" },
+          updatedByDetails: { $first: "$updatedByDetails" },
+          users: {
+            $push: {
+              userId: "$userDetails._id",
+              name: "$userDetails.name",
+              email: "$userDetails.email",
+              role: "$users.role",
+            },
+          },
         },
       },
       {
@@ -172,85 +249,9 @@ export async function GET(): Promise<unknown[] | undefined> {
           dueDate: 1,
           createdAt: 1,
           updatedAt: 1,
-          createdBy: {
-            id: "$createdByDetails._id",
-            name: "$createdByDetails.name",
-            email: "$createdByDetails.email",
-            role: "OWNER", // Always set the createdBy as OWNER
-          },
-          updatedBy: {
-            id: "$updatedByDetails._id",
-            name: "$updatedByDetails.name",
-            email: "$updatedByDetails.email",
-            role: {
-              $let: {
-                vars: {
-                  updatedUser: {
-                    $arrayElemAt: [
-                      {
-                        $filter: {
-                          input: "$users", // Filter the project's users array
-                          as: "user",
-                          cond: { $eq: ["$$user.userId", "$updatedBy"] },
-                        },
-                      },
-                      0,
-                    ],
-                  },
-                },
-                in: "$$updatedUser.role", // Get the role from the filtered user
-              },
-            },
-          },
-          users: {
-            $map: {
-              input: "$users", // Iterate over the users array
-              as: "user",
-              in: {
-                userId: "$$user.userId",
-                role: "$$user.role",
-                userDetails: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: "$userDetails", // Filter userDetails to match current userId
-                        as: "details",
-                        cond: { $eq: ["$$details._id", "$$user.userId"] },
-                      },
-                    },
-                    0,
-                  ],
-                },
-              },
-            },
-          },
-        },
-      },
-      {
-        $unwind: {
-          path: "$users", // Unwind users to format the array
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          name: { $first: "$name" },
-          status: { $first: "$status" },
-          archived: { $first: "$archived" },
-          dueDate: { $first: "$dueDate" },
-          createdAt: { $first: "$createdAt" },
-          updatedAt: { $first: "$updatedAt" },
-          createdBy: { $first: "$createdBy" },
-          updatedBy: { $first: "$updatedBy" }, // Include updatedBy in the group stage
-          users: {
-            $push: {
-              userId: "$users.userId",
-              role: "$users.role",
-              name: "$users.userDetails.name",
-              email: "$users.userDetails.email",
-            },
-          },
+          users: 1,
+          createdByDetails: 1,
+          updatedByDetails: 1,
         },
       },
       {

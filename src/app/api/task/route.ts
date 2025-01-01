@@ -22,10 +22,12 @@ export async function POST(req: Request): Promise<NextResponse<{ message: string
 }
 
 // creating get route for fetching all tasks.
-export async function GET(): Promise<NextResponse<{ message: string; tasks: unknown[] | undefined; }> | undefined> {
+export async function GET(req: {url: string | URL; query: { projectId: string; };}): Promise<NextResponse<{ message: string; tasks: unknown[] | undefined; }> | undefined> {
   try {
     await connectToDatabase();
-    const tasks = await taskService.getTasks();
+    const url = new URL(req.url);
+    const projectId = url.searchParams.get("projectId");
+    const tasks = await taskService.getTasks(projectId as string);
     return NextResponse.json({ message: "Tasks retrieved successfully", tasks });
   } catch (error: unknown) {
     if (error instanceof Error) {

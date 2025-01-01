@@ -41,8 +41,8 @@ export function validateTask(task: TaskData) {
       throw new Error("UpdatedBy field must be a valid ObjectId.");
     }
     
-    if (!task.projectId || !!mongoose.Types.ObjectId.isValid(task.projectId)) {
-    // if (!task.projectId) {
+    // if (!task.projectId || !!mongoose.Types.ObjectId.isValid(task.projectId)) {
+    if (!task.projectId) {
       throw new Error("ProjectId must be a valid ObjectId.");
     }
   

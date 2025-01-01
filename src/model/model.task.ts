@@ -8,7 +8,11 @@ const taskSchema = new Schema<taskInterface,TaskData>(
     priority: { type: Number, required: true },
     status: { type: Number, required: true },
     archived: { type: Boolean, default: false },
-    users: [{ type: String, required: true }], 
+    users: [{ 
+       type: mongoose.Schema.Types.ObjectId,
+      ref: "user", // Reference to the User model
+      required: true,
+     }], 
     dueDate: { type: Date, required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
