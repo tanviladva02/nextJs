@@ -6,7 +6,7 @@ import {validateUser} from "@/src/utils/validation";
 import fs from "fs";
 
 
-export async function addUser(data: UserUpdate, file?: Express.Multer.File): Promise<unknown> {
+export async function addUser(data: UserUpdate, file: Express.Multer.File): Promise<unknown> {
   try {
     const { name, email, password, mobile, gender, birthDate } = data;
 
