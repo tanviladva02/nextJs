@@ -19,7 +19,7 @@ export async function addUser(data: UserUpdate, file: Express.Multer.File): Prom
       throwError("file is required ",400);
     }
 
-    const userImagePath = `/uploads/${file.filename}`;
+    const userImagePath = `@/public/uploads/${file.filename}`;
     const img = imageToBase64(userImagePath); 
   
     const newUser = new User({
@@ -94,7 +94,6 @@ export async function updateUser(id: string, data: Partial<UserUpdate>): Promise
     }
   }
 }
-
 
 function imageToBase64(imagePath: string): string {
   try {
