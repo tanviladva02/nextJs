@@ -1,28 +1,5 @@
 import  { Schema, model, models  } from "mongoose";
-// import { throwError } from "@/src/utils/errorhandler";
 import { UserUpdate } from "../interface/userInterface";
-
-// export async function calculateAge(birthDate: string): Promise<number> {
-//   if (typeof birthDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
-//     throwError("Invalid birthDate format. Expected 'YYYY-MM-DD'.", 400);
-//   }
-
-//   const [year, month, day] = birthDate.split("-").map(Number);
-//   const birth = new Date(year, month - 1, day); // Create a Date object
-
-//   if (isNaN(birth.getTime())) {
-//     throwError("Invalid birthDate. Unable to parse into a valid date.", 400);
-//   }
-
-//   const today = new Date();
-//   const age = today.getFullYear() - birth.getFullYear();
-//   const isBeforeBirthday =
-//     today.getMonth() < birth.getMonth() ||
-//     (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate());
-
-//   return isBeforeBirthday ? age - 1 : age;
-// }
-
 export class DateUtils {
   static calculateAge(birthDate: string): number {
     if (typeof birthDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
@@ -72,6 +49,7 @@ const userSchema = new Schema<UserUpdate>({
   },
   birthDate: { type: Date, required: true },
   age: { type: Number },
+  userImage:{type:String},
   archived: { type: Boolean, default: false }
 }, { timestamps: true });
 

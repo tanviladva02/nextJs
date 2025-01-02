@@ -10,6 +10,7 @@ export interface UserUpdate {
     birthDate?: string;
     age?:number;
     role: "USER" | "OWNER" | "ADMIN";
+    userImage: string,
     archived?: boolean;
     createdAt?: Date; 
     updatedAt?: Date;
