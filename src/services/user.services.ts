@@ -13,13 +13,15 @@ export async function addUser(data: UserUpdate, file: Express.Multer.File): Prom
     const normEmail = email.toLowerCase();
     const age = DateUtils.calculateAge(birthDate as string);
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("file::::::::::::",file);
+    console.log("file::::::::::::",file.name);
 
     if(!file){
       throwError("file is required ",400);
     }
+    
 
-    const userImagePath = `@/public/uploads/${file.filename}`;
+    const userImagePath = `@/public/uploads/${file.name}`;
+    console.log(":::",userImagePath);
     const img = imageToBase64(userImagePath); 
   
     const newUser = new User({
