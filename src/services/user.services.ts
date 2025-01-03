@@ -1,9 +1,12 @@
 import User, { DateUtils } from "@/src/model/model.user";
 import { UserUpdate } from "../interface/userInterface";
 import bcrypt from "bcrypt";
+import { Express } from "express";
+import Multer from "multer";
 import { throwError } from "@/src/utils/errorhandler";
 import {validateUser} from "@/src/utils/validation";
 import fs from "fs";
+import path from "path";
 
 
 export async function addUser(data: UserUpdate, file: Express.Multer.File): Promise<unknown> {
@@ -19,8 +22,7 @@ export async function addUser(data: UserUpdate, file: Express.Multer.File): Prom
       throwError("file is required ",400);
     }
     
-
-    const userImagePath = `@/public/uploads/${file.name}`;
+    const userImagePath = `public/uploads/${file.name}`;
     console.log(":::",userImagePath);
     const img = imageToBase64(userImagePath); 
   
@@ -97,20 +99,58 @@ export async function updateUser(id: string, data: Partial<UserUpdate>): Promise
   }
 }
 
-function imageToBase64(imagePath: string): string {
+// function imageToBase64(imagePath: string): string {
+//   console.log("imagePath ::: ",imagePath);
+//   try {
+//     // Read image as a binary file
+//     const imageBuffer = fs.readFileSync(imagePath);
+
+//     // Convert the binary data to Base64 string
+//     const base64Image = imageBuffer.toString('base64');
+
+//     // Optionally, you can embed the Base64 string into an image tag
+//     const base64String = `data:image/jpeg;base64,${base64Image}`;
+
+//     return base64String;
+//   } catch (error) {
+//     console.error('Error converting image to Base64:', error);
+//     throw new Error('Failed to convert image to Base64');
+//   }
+// }
+
+
+function imageToBase64(imagePath: string) {
+  console.log("Received image path:", imagePath);
+
   try {
+    // Resolve the absolute path
+    const resolvedPath = path.resolve(imagePath);
+    console.log("Resolved image path:", resolvedPath);
+
+    // Check if the file exists
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`File does not exist at path: ${resolvedPath}`);
+    }
+
     // Read image as a binary file
-    const imageBuffer = fs.readFileSync(imagePath);
+    const imageBuffer = fs.readFileSync(resolvedPath);
 
     // Convert the binary data to Base64 string
     const base64Image = imageBuffer.toString('base64');
 
-    // Optionally, you can embed the Base64 string into an image tag
+    // Prepend the MIME type if needed
     const base64String = `data:image/jpeg;base64,${base64Image}`;
+    console.log("Base64 conversion successful");
 
     return base64String;
-  } catch (error) {
-    console.error('Error converting image to Base64:', error);
-    throw new Error('Failed to convert image to Base64');
+  }  catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding task:", error.message);
+      throwError(error.message || "Error adding task", 500);
+    } else {
+      // In case the error is not an instance of Error
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { UserUpdate } from "@/src/interface/userInterface";
 import { addUser, getAllUsers, updateUser } from "@/src/services/user.services";
 import connectToDatabase from "@/src/utils/db";
+// import { Express } from "express";
 import { throwError } from "@/src/utils/errorhandler";
 // import multer from "multer";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
   try {
     // Connect to the database
     await connectToDatabase();
-
+    console.log("post function is running");
     // First, extract the formData (for handling both JSON fields and file uploads)
     const formData = await req.formData();
 
