@@ -58,10 +58,10 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
       email,
       password,
       mobile,
-      gender: genderValue as 1 | 2 | 3, // Now gender is correctly typed as 1 | 2 | 3
+      gender: genderValue as 1 | 2 | 3, 
       birthDate,
-      userImage: `@/public/uploads/${userImage.name}` , // Include image path if image is provided
-      role: role as "USER" | "OWNER" | "ADMIN", // Include role as part of the data
+      userImage: `@/public/uploads/${userImage.name}` , 
+      role: role as "USER" | "OWNER" | "ADMIN", 
     };
 
     console.log("UserData :::: ",userData);
@@ -87,81 +87,6 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
     }
   }
 }
-
-// export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
-//   try {
-//     // Connect to the database
-//     await connectToDatabase();
-
-//     // First, extract the formData (for handling both JSON fields and file uploads)
-//     const formData = await req.formData();
-
-//     // Extract the user image from formData
-//     const userImage = formData.get('userImage') as File ;
-//     console.log('userImage ::: ', userImage);
-
-//     if (!userImage) {
-//       throwError("No image file uploaded", 400);
-//     }
-
-//     // Save the file to the 'public/uploads' directory
-//     const filePath = path.join(process.cwd(), 'public', 'uploads', userImage.name);
-//     const fileBuffer = Buffer.from(await userImage.arrayBuffer());
-//     fs.writeFileSync(filePath, fileBuffer);
-
-//     // Extract other fields from formData
-//     const name = formData.get('name') as string;
-//     const email = formData.get('email') as string;
-//     const password = formData.get('password') as string;
-//     const mobile = formData.get('mobile') as string;
-//     const gender = formData.get('gender') as string;
-//     const birthDate = formData.get('birthDate') as string;
-//     const role = formData.get('role') as string;
-
-//     // Ensure required fields are present
-//     if (!name || !email || !password || !mobile || !gender || !birthDate || !role) {
-//       throwError('Missing required fields', 400);
-//     }
-
-//     // Validate gender (ensure it's one of 1, 2, or 3)
-//     const genderValue = parseInt(gender);
-//     if (![1, 2, 3].includes(genderValue)) {
-//       throwError('Invalid gender value', 400);
-//     }
-
-//     // Prepare the data object including the userImage path if provided
-//     const userData = {
-//       name,
-//       email,
-//       password,
-//       mobile,
-//       gender: genderValue as 1 | 2 | 3,
-//       birthDate,
-//       userImage: `/uploads/${userImage.name}`, // Correct image path
-//       role: role as 'USER' | 'OWNER' | 'ADMIN',
-//     };
-
-//     console.log('UserData :::: ', userData);
-
-//     // Call the addUser service to add the user to the database
-//     const newUser = await addUser(userData); 
-
-//     console.log('newUser ::', newUser);
-
-//     // Return the response after successfully adding the user
-//     return NextResponse.json({ message: 'Data added successfully!', user: newUser }, { status: 201 });
-//   } catch (error: unknown) {
-//     if (error instanceof Error) {
-//       console.error('Error adding user:', error.message);
-//       throwError(error.message || 'Error adding user', 500);
-//       return NextResponse.json({ message: error.message || 'Error adding user' }, { status: 500 });
-//     } else {
-//       console.error('An unknown error occurred');
-//       throwError('Unknown error', 500);
-//       return NextResponse.json({ message: 'Unknown error' }, { status: 500 });
-//     }
-//   }
-// }
 
 export async function GET(): Promise<Response | undefined> {
   try {

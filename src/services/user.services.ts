@@ -2,7 +2,7 @@ import User, { DateUtils } from "@/src/model/model.user";
 import { UserUpdate } from "../interface/userInterface";
 import bcrypt from "bcrypt";
 import { Express } from "express";
-import Multer from "multer";
+// import Multer from "multer";
 import { throwError } from "@/src/utils/errorhandler";
 import {validateUser} from "@/src/utils/validation";
 import fs from "fs";
