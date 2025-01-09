@@ -1,8 +1,39 @@
-import { POST as createProjectService, GET as getProjectsService, PUT as updateProjectService } from "@/src/services/project.services";
+import { POST as createProjectService, getProjectDetails,  PUT as updateProjectService } from "@/src/services/project.services";
 import { NextResponse } from "next/server";
 import { throwError } from "@/src/utils/errorhandler";
 import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose";
+
+// Define your GET function
+
+export async function GET(req: { url: string | URL; }) {
+  try {
+    await connectToDatabase();
+    const url = new URL(req.url);
+    const userId = url.searchParams.get("userId");
+    const projectId = url.searchParams.get("projectId");
+
+    // Fetch project details and generate PDF
+    const doc = await getProjectDetails(userId as string, projectId as string);
+    if (!doc) {
+      return NextResponse.json({ message: "Project not found" }, { status: 404 });
+    }
+
+    // Send PDF as response to trigger download
+    const pdfOutput = doc.output('arraybuffer');
+    return new NextResponse(pdfOutput, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': 'attachment; filename="project-details.pdf"',
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Error generating PDF:", error);
+    return new NextResponse("Error generating PDF", { status: 500 });
+  }
+}
+
 
 export async function POST(req: Request): Promise<NextResponse<{ message: string; result: unknown; }> | undefined> {
   try {
@@ -14,25 +45,6 @@ export async function POST(req: Request): Promise<NextResponse<{ message: string
     if (error instanceof Error) {
       console.error("Error adding project:", error.message);
       throwError(error.message || "Error adding project", 500);
-    } else {
-      console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
-    }
-  }
-}
-
-export async function GET(req: {url: string | URL; query: { projectId: string; };}): Promise<NextResponse<{ message: string; projects: unknown[] | undefined; }> | undefined>{
-  try {
-    await connectToDatabase();
-    const url = new URL(req.url);
-    const userId = url.searchParams.get("userId");
-    console.log("userId",userId);
-    const projects = await getProjectsService(userId as string);
-    return NextResponse.json({ message: "Projects fetched successfully!", projects });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error fetching projects:", error.message);
-      throwError(error.message || "Error fetching projects", 500);
     } else {
       console.error("An unknown error occurred");
       throwError("Unknown error", 500);
@@ -89,3 +101,18 @@ export async function PUT(req: Request):Promise<NextResponse<{ message: string; 
     }
   }
 }
+
+// fetch('http://localhost:3000/api/project?projectId=677fa4b1ad53f3ccd9fd7249')
+// .then(response => response.json())
+// .then(data => {
+//   if (data.pdfUrl) {
+//     console.log('PDF URL:', data.pdfUrl);
+//     // Optionally, you can open the PDF in a new tab
+//     window.open(data.pdfUrl, '_blank');
+//   } else {
+//     console.error('PDF URL not found in response');
+//   }
+// })
+// .catch(error => {
+//   console.error('Error:', error);
+// });

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
 
     // Call the addUser service to add the user to the database
     const newUser = await addUser(userData, userImage as unknown as Express.Multer.File);
-    // const newUser = await addUser(userData);
+    // const newUser = await addUser(userData); // userData does not has access userImage 
     
     console.log("newUser ::",newUser);
 

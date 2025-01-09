@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const uri = process.env.MONGODB_URI || "mongodb+srv://tanviladva01:tanvi123@cluster0.t0bdy.mongodb.net/nextJs";
+console.log(uri);
 
 const options = {
   useNewUrlParser: true,         // Use the new URL parser
