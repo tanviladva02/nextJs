@@ -5,8 +5,10 @@ import User from "@/src/model/model.user";
 // import task from "@/src/model/model.task";
 import { throwError } from "@/src/utils/errorhandler";
 import {  validateProject } from "../utils/validation";
-import { jsPDF } from 'jspdf';
-import mongoose from "mongoose";;
+// import { jsPDF } from 'jspdf';
+import { Parser } from "json2csv";
+import * as fs from "fs";
+import mongoose from "mongoose";
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
@@ -78,11 +80,96 @@ export async function POST(
   }
 }
 
+// export async function getProjectDetails(userId: string, projectId: string) {
+//   try {
+//     console.time("GET");
+
+//     const projects = await aggregationPipelineFun(userId, projectId);
+
+//     if (projects.length === 0) {
+//       throw new Error("No project found with the provided ID.");
+//     }
+
+//     const project = projects[0];
+
+//     // Generate PDF using jsPDF
+//     const doc = new jsPDF();
+
+//     doc.setFont("helvetica");
+//     doc.setFontSize(14);
+
+//     // Project Details
+//     doc.text(`Project: ${project.name}`, 20, 20);
+//     doc.text(`Status: ${project.status}`, 20, 30);
+//     doc.text(`Archived: ${project.archived}`, 20, 40);
+//     doc.text(`Due Date: ${new Date(project.dueDate).toLocaleDateString()}`, 20, 50);
+//     doc.text(`Created At: ${new Date(project.createdAt).toLocaleDateString()}`, 20, 60);
+//     doc.text(`Updated At: ${new Date(project.updatedAt).toLocaleDateString()}`, 20, 70);
+
+//     // Created By
+//     doc.text("Created By:", 20, 80);
+//     doc.text(`Name: ${project.createdByDetails.name || "N/A"}`, 20, 90);
+//     doc.text(`Email: ${project.createdByDetails.email || "N/A"}`, 20, 100);
+//     doc.text(`Role: ${project.createdByDetails.role || "N/A"}`, 20, 110);
+
+//     // Updated By
+//     doc.text("Updated By:", 20, 120);
+//     doc.text(`Name: ${project.updatedByDetails?.name || "N/A"}`, 20, 130);
+//     doc.text(`Email: ${project.updatedByDetails?.email || "N/A"}`, 20, 140);
+//     doc.text(`Role: ${project.updatedByDetails?.role || "N/A"}`, 20, 150);
+
+//     // Users
+//     doc.text("Users:", 20, 160);
+//     project.users.forEach((user: { name: any; email: any; role: any }, index: number) => {
+//       doc.text(`${index + 1}. ${user.name || "N/A"} (${user.email || "N/A"}) - Role: ${user.role || "N/A"}`, 20, 170 + index * 10);
+//     });
+
+//     // Tasks
+//     let taskStartY = 170 + project.users.length * 10 + 10; // Adjust starting Y position
+//     doc.text("Tasks:", 20, taskStartY);
+//     taskStartY += 10;
+    
+//     project.tasks.forEach(
+//       (task: { id: any; name: any; status: any; userDetails: { name: any }[] }, index: number) => {
+//         const assignedUsers = task.userDetails.map((user) => user.name).join(", "); // Map user names
+//         // console.log("taskUser", assignedUsers); 
+//         if(assignedUsers === ""){
+//           return doc.text(
+//             `${index + 1}. Task Name: ${task.name || "N/A"}, Status: ${task.status || "N/A"}`,
+//             20,
+//             taskStartY + index * 10
+//           );
+//         }
+//         else{
+//           return doc.text(
+//             `${index + 1}. Task Name: ${task.name || "N/A"}, Status: ${task.status || "N/A"}, Users: ${assignedUsers}`,
+//             20,
+//             taskStartY + index * 10
+//           );
+//         }
+//       }
+//     );
+    
+
+//     console.timeEnd("GET");
+//     return doc;
+
+//   } catch (error: unknown) {
+//     if (error instanceof Error) {
+//       console.error("Error generating project details:", error.message);
+//       throw new Error(error.message || "Error generating project details");
+//     } else {
+//       console.error("An unknown error occurred");
+//       throw new Error("Unknown error");
+//     }
+//   }
+// }
+
 export async function getProjectDetails(userId: string, projectId: string) {
   try {
     console.time("GET");
 
-    const projects = await aggregationPipelineFun(userId,projectId);
+    const projects = await aggregationPipelineFun(userId, projectId);
 
     if (projects.length === 0) {
       throw new Error("No project found with the provided ID.");
@@ -90,46 +177,77 @@ export async function getProjectDetails(userId: string, projectId: string) {
 
     const project = projects[0];
 
-    // Generate PDF using jsPDF
-    const doc = new jsPDF();
+    // Prepare Data for CSV
+    const projectDetails = {
+      "Project Name": project.name || "N/A",
+      Status: project.status || "N/A",
+      Archived: project.archived || "N/A",
+      "Due Date": new Date(project.dueDate).toLocaleDateString() || "N/A",
+      "Created At": new Date(project.createdAt).toLocaleDateString() || "N/A",
+      "Updated At": new Date(project.updatedAt).toLocaleDateString() || "N/A",
+    };
 
-    doc.setFont("helvetica");
-    doc.setFontSize(14);
-    doc.text(`Project: ${project.name}`, 20, 20);
-    doc.text(`Status: ${project.status}`, 20, 30);
-    doc.text(`Archived: ${project.archived}`, 20, 40);
-    doc.text(`Due Date: ${new Date(project.dueDate).toLocaleDateString()}`, 20, 50);
-    doc.text(`Created At: ${new Date(project.createdAt).toLocaleDateString()}`, 20, 60);
-    doc.text(`Updated At: ${new Date(project.updatedAt).toLocaleDateString()}`, 20, 70);
-    
-    doc.text("Created By:", 20, 80);
-    doc.text(`Name: ${project.createdByDetails.name}`, 20, 90);
-    doc.text(`Email: ${project.createdByDetails.email}`, 20, 100);
-    doc.text(`Role: ${project.createdByDetails.role}`, 20, 110);
+    const createdByDetails = {
+      "Created By (Name)": project.createdByDetails?.name || "N/A",
+      "Created By (Email)": project.createdByDetails?.email || "N/A",
+      "Created By (Role)": project.createdByDetails?.role || "N/A",
+    };
 
-    doc.text("Updated By:", 20, 120);
-    doc.text(`Name: ${project.updatedByDetails?.name || "N/A"}`, 20, 130);
-    doc.text(`Email: ${project.updatedByDetails?.email || "N/A"}`, 20, 140);
-    doc.text(`Role: ${project.updatedByDetails?.role || "N/A"}`, 20, 150);
+    const updatedByDetails = {
+      "Updated By (Name)": project.updatedByDetails?.name || "N/A",
+      "Updated By (Email)": project.updatedByDetails?.email || "N/A",
+      "Updated By (Role)": project.updatedByDetails?.role || "N/A",
+    };
 
-    doc.text("Users:", 20, 160);
-    project.users.forEach((user: { name: any; email: any; role: any; }, index: number) => {
-      doc.text(`${index + 1}. ${user.name} (${user.email}) - Role: ${user.role}`, 20, 170 + index * 10);
-    });
+    // Flatten Users Data
+    const users = project.users.map((user: { name: any; email: any; role: any }) => ({
+      "User Name": user.name || "N/A",
+      "User Email": user.email || "N/A",
+      "User Role": user.role || "N/A",
+    }));
+
+    // Flatten Tasks Data
+    const tasks = project.tasks.map(
+      (task: { name: any; status: any;}) => ({
+        "Task Name": task.name || "N/A",
+        "Task Status": task.status || "N/A",
+        // "Assigned Users": task.userDetails
+        //   .map((user) => user.name )
+        //   .join(", ") || "N/A",
+      })
+    );
+
+    // Combine All Sections into CSV Data
+    const data = [
+      { Section: "Project Details", ...projectDetails },
+      { Section: "Created By", ...createdByDetails },
+      { Section: "Updated By", ...updatedByDetails },
+      ...users.map((user:any, index:any) => ({ Section: `User ${index + 1}`, ...user })),
+      ...tasks.map((task:any, index:any) => ({ Section: `Task ${index + 1}`, ...task })),
+    ];
+
+    // Convert Data to CSV
+    const json2csvParser = new Parser();
+    const csv = json2csvParser.parse(data);
+
+    // Save CSV to File (Optional)
+    fs.writeFileSync("project-details.csv", csv);
 
     console.timeEnd("GET");
-    return doc;
+
+    return csv; // Return CSV content as a string (for API response or download)
 
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error updating project:", error.message);
-      throwError(error.message || "Error updating project", 500);
+      console.error("Error generating project details:", error.message);
+      throw new Error(error.message || "Error generating project details");
     } else {
       console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
+      throw new Error("Unknown error");
     }
   }
 }
+
 
 export async function PUT(
   projectId: string,
@@ -210,142 +328,194 @@ async function aggregationPipelineFun (userId: string, projectId: string){
     matchStage.$match["_id"] = new mongoose.Types.ObjectId(projectId);
   }
 
-  const aggregationPipeline: mongoose.PipelineStage[] = [
-    matchStage,
-    // Lookup for createdBy user details
-    {
-      $lookup: {
-        from: "users",
-        localField: "createdBy",
-        foreignField: "_id",
-        as: "createdByDetails",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              name: 1,
-              email: 1,
-              role: "OWNER",
-            },
-          },
-        ],
-      },
-    },
-    {
-      $unwind: {
-        path: "$createdByDetails",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    // Lookup for updatedBy user details
-    {
-      $lookup: {
-        from: "users",
-        localField: "updatedBy",
-        foreignField: "_id",
-        as: "updatedByDetails",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              name: 1,
-              email: 1,
-              role: 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $unwind: {
-        path: "$updatedByDetails",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    // Add role for updatedBy user based on users array
-    {
-      $addFields: {
-        "updatedByDetails.role": {
-          $arrayElemAt: [
-            "$users.role",
-            {
-              $indexOfArray: ["$users.userId", "$updatedBy"],
-            },
-          ],
-        },
-      },
-    },
-    // Lookup for task users
-    {
-      $unwind: {
-        path: "$users",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "users.userId",
-        foreignField: "_id",
-        as: "userDetails",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              name: 1,
-              email: 1,
-              role: 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $unwind: {
-        path: "$userDetails",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    // Group by task ID and collect user details
-    {
-      $group: {
-        _id: "$_id",
-        name: { $first: "$name" },
-        status: { $first: "$status" },
-        archived: { $first: "$archived" },
-        dueDate: { $first: "$dueDate" },
-        createdAt: { $first: "$createdAt" },
-        updatedAt: { $first: "$updatedAt" },
-        createdByDetails: { $first: "$createdByDetails" },
-        updatedByDetails: { $first: "$updatedByDetails" },
-        users: {
-          $push: {
-            userId: "$userDetails._id",
-            name: "$userDetails.name",
-            email: "$userDetails.email",
-            role: "$users.role",
-          },
-        },
-      },
-    },
-    // Project stage to shape the output
-    {
-      $project: {
-        name: 1,
-        status: 1,
-        archived: 1,
-        dueDate: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        users: 1,
-        createdByDetails: 1,
-        updatedByDetails: 1,
-      },
-    },
-    // Sort by createdAt descending (ensure sorting happens at the end)
-    { $sort: { createdAt: -1 } },
-  ];
 
+  const aggregationPipeline: mongoose.PipelineStage[] = [
+  matchStage,
+  // Lookup for createdBy user details
+  {
+    $lookup: {
+      from: "users",
+      localField: "createdBy",
+      foreignField: "_id",
+      as: "createdByDetails",
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            email: 1,
+            role: "OWNER",
+          },
+        },
+      ],
+    },
+  },
+  {
+    $unwind: {
+      path: "$createdByDetails",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  // Lookup for updatedBy user details
+  {
+    $lookup: {
+      from: "users",
+      localField: "updatedBy",
+      foreignField: "_id",
+      as: "updatedByDetails",
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            email: 1,
+            role: 1,
+          },
+        },
+      ],
+    },
+  },
+  {
+    $unwind: {
+      path: "$updatedByDetails",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  // Add role for updatedBy user based on users array
+  {
+    $addFields: {
+      "updatedByDetails.role": {
+        $arrayElemAt: [
+          "$users.role",
+          {
+            $indexOfArray: ["$users.userId", "$updatedBy"],
+          },
+        ],
+      },
+    },
+  },
+  // Lookup for task users
+  {
+    $unwind: {
+      path: "$users",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $lookup: {
+      from: "users",
+      localField: "users.userId",
+      foreignField: "_id",
+      as: "userDetails",
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            email: 1,
+            role: 1,
+          },
+        },
+      ],
+    },
+  },
+  {
+    $unwind: {
+      path: "$userDetails",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  // Group by task ID and collect user details
+  {
+    $group: {
+      _id: "$_id",
+      name: { $first: "$name" },
+      status: { $first: "$status" },
+      archived: { $first: "$archived" },
+      dueDate: { $first: "$dueDate" },
+      createdAt: { $first: "$createdAt" },
+      updatedAt: { $first: "$updatedAt" },
+      createdByDetails: { $first: "$createdByDetails" },
+      updatedByDetails: { $first: "$updatedByDetails" },
+      users: {
+        $push: {
+          userId: "$userDetails._id",
+          name: "$userDetails.name",
+          email: "$userDetails.email",
+          role: "$users.role",
+        },
+      },
+    },
+  },
+  // Lookup for tasks
+  {
+    $lookup: {
+      from: "tasks", // Assuming the tasks collection name is "tasks"
+      let: { projectId: "$_id" }, // Pass project ID to the pipeline
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$projectId", "$$projectId"] }, // Match projectId in tasks
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "users",
+            foreignField: "_id",
+            as: "userDetails",
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  name: 1, // User name
+                },
+              },
+            ],
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            status: 1,
+            userDetails: 1, // Include user details for tasks
+          },
+        },
+      ],
+      as: "tasks", // Save the tasks in the "tasks" field
+    },
+  },
+  {
+    $project: {
+      name: 1,
+      status: 1,
+      archived: 1,
+      dueDate: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      createdByDetails: 1,
+      updatedByDetails: 1,
+      users: {
+        userId: 1,
+        name: 1,
+        email: 1,
+        role: 1,
+      },
+      tasks: {
+        _id: 1,
+        name:1,
+        status: 1,
+        userDetails: 1,
+      }, // Include the tasks in the final output
+    },
+  },
+
+  // Sort by createdAt descending (ensure sorting happens at the end)
+  { $sort: { createdAt: -1 } },
+];
+  
+  
   const projects = await Project.aggregate(aggregationPipeline).exec();
   return projects;
 }

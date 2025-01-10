@@ -3,8 +3,38 @@ import { NextResponse } from "next/server";
 import { throwError } from "@/src/utils/errorhandler";
 import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose";
+import * as fs from 'fs';  // File system if you want to save the CSV locally (optional)
+import { Parser } from 'json2csv';
 
 // Define your GET function
+
+// export async function GET(req: { url: string | URL; }) {
+//   try {
+//     await connectToDatabase();
+//     const url = new URL(req.url);
+//     const userId = url.searchParams.get("userId");
+//     const projectId = url.searchParams.get("projectId");
+
+//     // Fetch project details and generate PDF
+//     const doc = await getProjectDetails(userId as string, projectId as string);
+//     if (!doc) {
+//       return NextResponse.json({ message: "Project not found" }, { status: 404 });
+//     }
+
+//     // Send PDF as response to trigger download
+//     const pdfOutput = doc.output('arraybuffer');
+//     return new NextResponse(pdfOutput, {
+//       status: 200,
+//       headers: {
+//         'Content-Type': 'application/pdf',
+//         'Content-Disposition': 'attachment; filename="project-details.pdf"',
+//       },
+//     });
+//   } catch (error: unknown) {
+//     console.error("Error generating PDF:", error);
+//     return new NextResponse("Error generating PDF", { status: 500 });
+//   }
+// }
 
 export async function GET(req: { url: string | URL; }) {
   try {
@@ -13,24 +43,35 @@ export async function GET(req: { url: string | URL; }) {
     const userId = url.searchParams.get("userId");
     const projectId = url.searchParams.get("projectId");
 
-    // Fetch project details and generate PDF
-    const doc = await getProjectDetails(userId as string, projectId as string);
+    // Fetch project details and generate CSV
+    const doc = await getProjectDetails(userId as string, projectId as string);console.log("doc",doc);
     if (!doc) {
       return NextResponse.json({ message: "Project not found" }, { status: 404 });
     }
 
-    // Send PDF as response to trigger download
-    const pdfOutput = doc.output('arraybuffer');
-    return new NextResponse(pdfOutput, {
+    // Convert the JSON data to CSV format
+    const json2csvParser = new Parser();
+    const csv = json2csvParser.parse(doc); // doc is the data returned from getProjectDetails
+
+    // Optionally, save the CSV to a file (this step is optional)
+    fs.writeFileSync('project-details.csv', csv);  // Uncomment if you want to save the CSV file locally
+
+    // Send CSV as response to trigger download
+    return new NextResponse(csv, {
       status: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="project-details.pdf"',
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="project-details.csv"',
       },
     });
-  } catch (error: unknown) {
-    console.error("Error generating PDF:", error);
-    return new NextResponse("Error generating PDF", { status: 500 });
+  }catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error adding project:", error.message);
+      throwError(error.message || "Error adding project", 500);
+    } else {
+      console.error("An unknown error occurred");
+      throwError("Unknown error", 500);
+    }
   }
 }
 
