@@ -3,11 +3,10 @@ import { NextResponse } from "next/server";
 import { throwError } from "@/src/utils/errorhandler";
 import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose";
-import * as fs from 'fs';  // File system if you want to save the CSV locally (optional)
-import { Parser } from 'json2csv';
+import * as fs from 'fs'; 
+import { Parser } from 'json2csv'; // for csv
 
-// Define your GET function
-
+// for pdf
 // export async function GET(req: { url: string | URL; }) {
 //   try {
 //     await connectToDatabase();
@@ -36,6 +35,7 @@ import { Parser } from 'json2csv';
 //   }
 // }
 
+// for csv
 export async function GET(req: { url: string | URL; }) {
   try {
     await connectToDatabase();
@@ -74,7 +74,6 @@ export async function GET(req: { url: string | URL; }) {
     }
   }
 }
-
 
 export async function POST(req: Request): Promise<NextResponse<{ message: string; result: unknown; }> | undefined> {
   try {
@@ -142,18 +141,3 @@ export async function PUT(req: Request):Promise<NextResponse<{ message: string; 
     }
   }
 }
-
-// fetch('http://localhost:3000/api/project?projectId=677fa4b1ad53f3ccd9fd7249')
-// .then(response => response.json())
-// .then(data => {
-//   if (data.pdfUrl) {
-//     console.log('PDF URL:', data.pdfUrl);
-//     // Optionally, you can open the PDF in a new tab
-//     window.open(data.pdfUrl, '_blank');
-//   } else {
-//     console.error('PDF URL not found in response');
-//   }
-// })
-// .catch(error => {
-//   console.error('Error:', error);
-// });

@@ -5,8 +5,8 @@ import User from "@/src/model/model.user";
 // import task from "@/src/model/model.task";
 import { throwError } from "@/src/utils/errorhandler";
 import {  validateProject } from "../utils/validation";
-// import { jsPDF } from 'jspdf';
-import { Parser } from "json2csv";
+// import { jsPDF } from 'jspdf'; // for pdf
+import { Parser } from "json2csv"; // for csv
 import * as fs from "fs";
 import mongoose from "mongoose";
 
@@ -80,6 +80,7 @@ export async function POST(
   }
 }
 
+// for pdf
 // export async function getProjectDetails(userId: string, projectId: string) {
 //   try {
 //     console.time("GET");
@@ -165,6 +166,7 @@ export async function POST(
 //   }
 // }
 
+// for csv excellsheet
 export async function getProjectDetails(userId: string, projectId: string) {
   try {
     console.time("GET");
@@ -248,7 +250,6 @@ export async function getProjectDetails(userId: string, projectId: string) {
   }
 }
 
-
 export async function PUT(
   projectId: string,
   name?: string,
@@ -318,6 +319,7 @@ export async function PUT(
   }
 }
 
+// common aggregation pipeline
 async function aggregationPipelineFun (userId: string, projectId: string){
 
   const matchStage: mongoose.PipelineStage = userId
@@ -327,7 +329,6 @@ async function aggregationPipelineFun (userId: string, projectId: string){
   if (projectId) {
     matchStage.$match["_id"] = new mongoose.Types.ObjectId(projectId);
   }
-
 
   const aggregationPipeline: mongoose.PipelineStage[] = [
   matchStage,
@@ -514,7 +515,6 @@ async function aggregationPipelineFun (userId: string, projectId: string){
   // Sort by createdAt descending (ensure sorting happens at the end)
   { $sort: { createdAt: -1 } },
 ];
-  
   
   const projects = await Project.aggregate(aggregationPipeline).exec();
   return projects;
