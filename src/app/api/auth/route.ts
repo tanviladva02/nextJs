@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import connectToDatabase from "@/src/utils/db";
 import { throwError } from "@/src/utils/errorhandler";
 import User from "@/src/model/model.user";
-// @panva/jose
 
 export async function getUserByEmail(email: string) {
   await connectToDatabase();
@@ -30,11 +29,6 @@ export async function POST(req: NextRequest): Promise<NextResponse | undefined> 
     }
     
     // Compare the provided password with the stored hashed password
-    // const isPasswordValid = await bcrypt.compare(password, user.password);
-    
-    // if (!isPasswordValid) {
-      //   throwError("Invalid password.", 400);
-      // }
       
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) throw new Error("Invalid password");
@@ -43,31 +37,15 @@ export async function POST(req: NextRequest): Promise<NextResponse | undefined> 
 
       // Generate a JWT token if authentication is successful
         const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
-          expiresIn: "1h", // Token expires in 1 hour
+          expiresIn: "3h", // Token expires in 1 hour
         });
-        console.log("token:- ",token);
-    
-    //   const secret = new TextEncoder().encode(process.env.JWT_SECRET || "nextJs");
-    //   console.log("secret :: ",secret);
-
-    // const token = await new SignJWT({ userId: user._id, email: user.email })
-    //   .setProtectedHeader({ alg: "HS256" })
-    //   .setExpirationTime("1h") // Token expires in 1 hour
-    //   .sign(secret);
-
-        
+        console.log("token:- ",token);       
 
     return NextResponse.json(
       { message: "Login successful" , token },
       { status: 200 }
     );
 
-    // response.cookies.set("token", token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === "production",
-    //   maxAge: 3600, // 1 hour
-    //   // path: "/",
-    // });
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error during login:", error.message);

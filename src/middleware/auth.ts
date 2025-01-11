@@ -21,7 +21,6 @@ type AuthorizedRequest = NextRequest & {
     params: Record<string, string>,
   ) => Response | Promise<Response>;
 
-
 export const middleware =
   (handler: RequestHandler) =>
   async (req: NextRequest, { params }: { params: Record<string, string> }) => {
@@ -44,5 +43,3 @@ export const middleware =
       return NextResponse.json({ message: "Token verification failed", error: String(error) }, { status: 401 });
     }
   };
-
-  

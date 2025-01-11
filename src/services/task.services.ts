@@ -29,7 +29,7 @@ export async function createTask(taskData: TaskData): Promise<unknown> {
       priority,
       status,
       createdBy: new ObjectId(createdBy),
-      users: userDetails,  // Store full user objects instead of IDs
+      users: userDetails,  
       archived: false,
       createdAt: new Date(),
       dueDate,
@@ -105,7 +105,7 @@ export async function getTasks(projectId: string): Promise<unknown[] | undefined
       {
         $lookup: {
           from: 'users',
-          localField: 'users',  // Users is an array of user IDs
+          localField: 'users', 
           foreignField: '_id',
           as: 'userDetails',
           pipeline: [
@@ -152,11 +152,11 @@ export async function getTasks(projectId: string): Promise<unknown[] | undefined
       },
       {
         $group: {
-          _id: "$_id", // Group by task ID to avoid duplicating
+          _id: "$_id", 
           name: { $first: "$name" },
           priority: { $first: "$priority" },
           status: { $first: "$status" },
-          users: { $push: "$userDetails" },  // Push full user details into 'users' array
+          users: { $push: "$userDetails" },  
           dueDate: { $first: "$dueDate" },
           createdAt: { $first: "$createdAt" },
           updatedAt: { $first: "$updatedAt" },
@@ -227,13 +227,12 @@ export async function updateTask(id: string, taskData: TaskData): Promise<unknow
 
     if (result.matchedCount === 0) throwError("Task not found", 404);
 
-    return await Task.findOne({ _id: new ObjectId(id) }); // will return updated task data finding through id.
+    return await Task.findOne({ _id: new ObjectId(id) }); 
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);
       throwError(error.message || "Error adding task", 500);
     } else {
-      // In case the error is not an instance of Error
       console.error("An unknown error occurred");
       throwError("Unknown error", 500);
     }
