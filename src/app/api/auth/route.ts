@@ -48,11 +48,9 @@ export async function POST(req: NextRequest): Promise<NextResponse | undefined> 
 
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error during login:", error.message);
       throwError(error.message, 500);
       return NextResponse.json({ message: error.message }, { status: 500 });
     } else {
-      console.error("An unknown error occurred during login");
       throwError("Unknown error during login", 500);
       return NextResponse.json({ message: "Unknown error during login" }, { status: 500 });
     }

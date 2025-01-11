@@ -4,6 +4,7 @@ import connectToDatabase from "@/src/utils/db";
 import mongoose from "mongoose";
 import { middleware } from "@/src/middleware/auth";
 
+// for pdf
 export const GET = middleware(async (req: Request) => {
   try {
     await connectToDatabase();
@@ -90,10 +91,8 @@ export const POST = middleware(async (req: Request) => {
     return NextResponse.json({ message: "Project added successfully!", result });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error adding project:", error.message);
       return NextResponse.json({ message: error.message || "Error adding project" }, { status: 500 });
     } else {
-      console.error("An unknown error occurred");
       return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
@@ -151,13 +150,11 @@ export const PUT = middleware(async (req: Request) => {
     });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error updating project:", error.message);
       return NextResponse.json(
         { message: error.message || "Error updating project", projects: [] },
         { status: 500 }
       );
     } else {
-      console.error("An unknown error occurred");
       return NextResponse.json(
         { message: "Unknown error", projects: [] },
         { status: 500 }

@@ -72,11 +72,9 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
     return NextResponse.json({ message: "Data added successfully!", user: newUser }, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error adding user:", error.message);
       throwError(error.message || "Error adding user", 500);
       return NextResponse.json({ message: error.message || "Error adding user" }, { status: 500 });
     } else {
-      console.error("An unknown error occurred");
       throwError("Unknown error", 500);
       return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
@@ -94,10 +92,8 @@ export const GET = middleware(async () => {
     return NextResponse.json(users, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error fetching users:", error.message);
       return NextResponse.json({ message: error.message || "Error fetching users" }, { status: 500 });
     } else {
-      console.error("An unknown error occurred");
       return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
@@ -128,10 +124,8 @@ export const PUT = middleware(async (req: Request) => {
     );
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error("Error updating user:", error.message);
       return NextResponse.json({ message: error.message || "Error updating user" }, { status: 500 });
     } else {
-      console.error("An unknown error occurred");
       return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
