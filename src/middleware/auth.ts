@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// // /* eslint-disable @typescript-eslint/no-explicit-any */
 import jwt from "jsonwebtoken";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -15,11 +13,10 @@ type AuthorizedRequest = NextRequest & {
     user: User
   };
   type RequestHandler = (
-    // eslint-disable-next-line no-unused-vars
     req: AuthorizedRequest,
-    // eslint-disable-next-line no-unused-vars
     params: Record<string, string>,
   ) => Response | Promise<Response>;
+
 
 export const middleware =
   (handler: RequestHandler) =>

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import * as taskService from "@/src/services/task.services";
 import connectToDatabase from "@/src/utils/db";
