@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import { UserUpdate } from "@/src/interface/userInterface";
 import { ProjectInterface } from "@/src/interface/projectInterface";
 import { throwError } from "./errorhandler";
-// import { UserRole } from "../model/model.project";
 
 export function validateTask(task: TaskData) {
   try {

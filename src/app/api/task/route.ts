@@ -1,62 +1,62 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import * as taskService from "@/src/services/task.services";
-import { throwError } from "@/src/utils/errorhandler";
 import connectToDatabase from "@/src/utils/db";
+import { middleware } from "@/src/middleware/auth";
 
-// creating post route for adding task.
-export async function POST(req: Request): Promise<NextResponse<{ message: string; result: unknown; }> | undefined> {
+export const POST = middleware(async (req: Request) => {
   try {
     await connectToDatabase();
     const taskData = await req.json();
+
     const result = await taskService.createTask(taskData);
     return NextResponse.json({ message: "Task added successfully!", result });
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error adding task:", error.message);
-      throwError(error.message || "Error adding task", 500);
+      return NextResponse.json({ message: error.message || "Error adding task" }, { status: 500 });
     } else {
       console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
+      return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
-}
+});
 
-// creating get route for fetching all tasks.
-export async function GET(req: {url: string | URL; query: { projectId: string; };}): Promise<NextResponse<{ message: string; tasks: unknown[] | undefined; }> | undefined> {
+export const GET = middleware(async (req) => {
   try {
     await connectToDatabase();
     const url = new URL(req.url);
     const projectId = url.searchParams.get("projectId");
     const tasks = await taskService.getTasks(projectId as string);
-    return NextResponse.json({ message: "Tasks retrieved successfully", tasks });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error("Error fetching tasks:", error.message);
-      throwError(error.message || "Error fetching tasks", 500);
-    } else {
-      console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
-    }
+    return NextResponse.json({
+      message: "Tasks retrieved successfully",
+      tasks,
+    });
+  } catch (err) {
+    return NextResponse.json(err);
   }
-}
+});
 
-export async function PUT(req: Request): Promise<NextResponse<{ message: string; updatedTask: unknown; }> | undefined> {
+export const PUT = middleware(async (req: Request) => {
   try {
     await connectToDatabase();
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
-    if (!id) throwError("Task ID is required", 400);
+    if (!id) {
+      return NextResponse.json({ message: "Task ID is required" }, { status: 400 });
+    }
 
     const taskData = await req.json();
+
     const updatedTask = await taskService.updateTask(id as string, taskData);
     return NextResponse.json({ message: "Task updated successfully", updatedTask });
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error updating task:", error.message);
-      throwError(error.message || "Error updating task", 500);
+      return NextResponse.json({ message: error.message || "Error updating task" }, { status: 500 });
     } else {
       console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
+      return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
-}
+});

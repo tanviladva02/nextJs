@@ -1,16 +1,11 @@
 import { UserUpdate } from "@/src/interface/userInterface";
 import { addUser, getAllUsers, updateUser } from "@/src/services/user.services";
 import connectToDatabase from "@/src/utils/db";
-// import { Express } from "express";
 import { throwError } from "@/src/utils/errorhandler";
-// import multer from "multer";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
-
-// const upload = multer({ 
-//   dest: './public/uploads/', // Save files to public/uploads
-// });
+import { middleware } from "@/src/middleware/auth";
 
 export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
   try {
@@ -88,41 +83,56 @@ export async function POST(req: NextRequest): Promise<NextResponse | unknown> {
   }
 }
 
-export async function GET(): Promise<Response | undefined> {
+export const GET = middleware(async () => {
   try {
     await connectToDatabase();
+
+    // Fetch all users
     const users = await getAllUsers();
-    return new Response(JSON.stringify(users), { status: 200 });
+
+    // Return users in the response
+    return NextResponse.json(users, { status: 200 });
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error fetching users:", error.message);
-      throwError(error.message || "Error fetching users", 500);
+      return NextResponse.json({ message: error.message || "Error fetching users" }, { status: 500 });
     } else {
       console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
+      return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
-}
+});
 
-export async function PUT(req: Request): Promise<Response | undefined> {
+export const PUT = middleware(async (req: Request) => {
   try {
     await connectToDatabase();
-    const url = new URL(req.url);
+
+    // Extract the user ID from the query parameters
+    const url = new URL(req.url, `http://${req.headers.get("host")}`);
     const id = url.searchParams.get("id");
+
     if (!id) {
-      throwError("User ID is required.", 400);
+      return NextResponse.json({ message: "User ID is required" }, { status: 400 });
     }
+
+    // Parse the request body
     const data = await req.json();
-    const updatedUser = await updateUser(id as string, data);
-    return new Response(JSON.stringify({ message: "User updated successfully", user: updatedUser }), { status: 200 });
+
+    // Update the user
+    const updatedUser = await updateUser(id, data);
+
+    // Return success response
+    return NextResponse.json(
+      { message: "User updated successfully", user: updatedUser },
+      { status: 200 }
+    );
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error updating user:", error.message);
-      throwError(error.message || "Error updating user", 500);
+      return NextResponse.json({ message: error.message || "Error updating user" }, { status: 500 });
     } else {
       console.error("An unknown error occurred");
-      throwError("Unknown error", 500);
+      return NextResponse.json({ message: "Unknown error" }, { status: 500 });
     }
   }
-}
-
+});

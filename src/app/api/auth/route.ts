@@ -1,48 +1,73 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import connectToDatabase from "@/src/utils/db";
 import { throwError } from "@/src/utils/errorhandler";
 import User from "@/src/model/model.user";
+// @panva/jose
 
 export async function getUserByEmail(email: string) {
+  await connectToDatabase();
   return await User.findOne({ email });
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse | undefined> {
   try {
     // Get the request body (email and password)
+    await connectToDatabase();
     const { email, password } = await req.json();
 
     // Ensure email and password are provided
     if (!email || !password) {
       throwError("Email and password are required.", 400);
     }
-
+    
     // Fetch user from the database by email using the service function
     const user = await getUserByEmail(email);
-
+    
     if (!user) {
       throwError("User not found.", 404);
     }
-
+    
     // Compare the provided password with the stored hashed password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    // if (!isPasswordValid) {
+      //   throwError("Invalid password.", 400);
+      // }
+      
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) throw new Error("Invalid password");
+      console.log("process.env.JWT_SECRET::::",process.env.JWT_SECRET)
+      const JWT_SECRET =  "nextJS123"
 
-    if (!isPasswordValid) {
-      throwError("Invalid password.", 400);
-    }
+      // Generate a JWT token if authentication is successful
+        const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
+          expiresIn: "1h", // Token expires in 1 hour
+        });
+        console.log("token:- ",token);
+    
+    //   const secret = new TextEncoder().encode(process.env.JWT_SECRET || "nextJs");
+    //   console.log("secret :: ",secret);
 
-    // Generate a JWT token if authentication is successful
-    const token = jwt.sign({ userId: user._id, email: user.email }, process.env.JWT_SECRET || "nextJS", {
-      expiresIn: "1h", // Token expires in 1 hour
-    });
-    console.log("token:- ",token);
+    // const token = await new SignJWT({ userId: user._id, email: user.email })
+    //   .setProtectedHeader({ alg: "HS256" })
+    //   .setExpirationTime("1h") // Token expires in 1 hour
+    //   .sign(secret);
 
-    // Return the token in the response
+        
+
     return NextResponse.json(
-      { message: "Login successful", token },
+      { message: "Login successful" , token },
       { status: 200 }
     );
+
+    // response.cookies.set("token", token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   maxAge: 3600, // 1 hour
+    //   // path: "/",
+    // });
   } catch (error: unknown) {
     if (error instanceof Error) {
       console.error("Error during login:", error.message);

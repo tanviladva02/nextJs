@@ -2,7 +2,6 @@ import User, { DateUtils } from "@/src/model/model.user";
 import { UserUpdate } from "../interface/userInterface";
 import bcrypt from "bcrypt";
 import { Express } from "express";
-// import Multer from "multer";
 import { throwError } from "@/src/utils/errorhandler";
 import {validateUser} from "@/src/utils/validation";
 import fs from "fs";
@@ -98,26 +97,6 @@ export async function updateUser(id: string, data: Partial<UserUpdate>): Promise
     }
   }
 }
-
-// function imageToBase64(imagePath: string): string {
-//   console.log("imagePath ::: ",imagePath);
-//   try {
-//     // Read image as a binary file
-//     const imageBuffer = fs.readFileSync(imagePath);
-
-//     // Convert the binary data to Base64 string
-//     const base64Image = imageBuffer.toString('base64');
-
-//     // Optionally, you can embed the Base64 string into an image tag
-//     const base64String = `data:image/jpeg;base64,${base64Image}`;
-
-//     return base64String;
-//   } catch (error) {
-//     console.error('Error converting image to Base64:', error);
-//     throw new Error('Failed to convert image to Base64');
-//   }
-// }
-
 
 function imageToBase64(imagePath: string) {
   console.log("Received image path:", imagePath);
