@@ -79,14 +79,6 @@ export const POST = middleware(async (req: Request) => {
 
     const { name, status, createdBy, users, dueDate } = await req.json();
 
-    // Optionally, you can enforce that the authenticated user matches `createdBy`
-    // if (req.user?.id !== createdBy) {
-    //   return NextResponse.json(
-    //     { message: "You are not authorized to create this project" },
-    //     { status: 403 }
-    //   );
-    // }
-
     const result = await createProjectService(name, status, createdBy, users, dueDate);
     return NextResponse.json({ message: "Project added successfully!", result });
   } catch (error: unknown) {

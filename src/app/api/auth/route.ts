@@ -32,8 +32,8 @@ export async function POST(req: NextRequest): Promise<NextResponse | undefined> 
       
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) throw new Error("Invalid password");
-      console.log("process.env.JWT_SECRET::::",process.env.JWT_SECRET)
-      const JWT_SECRET =  "nextJS123"
+      console.log("process.env.JWT_SECRET::::",process.env.JWT_SECRET);
+      const JWT_SECRET =  "nextJS123";
 
       // Generate a JWT token if authentication is successful
         const token = jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {

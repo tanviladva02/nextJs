@@ -331,189 +331,189 @@ async function aggregationPipelineFun (userId: string, projectId: string){
   }
 
   const aggregationPipeline: mongoose.PipelineStage[] = [
-  matchStage,
-  // Lookup for createdBy user details
-  {
-    $lookup: {
-      from: "users",
-      localField: "createdBy",
-      foreignField: "_id",
-      as: "createdByDetails",
-      pipeline: [
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            email: 1,
-            role: "OWNER",
-          },
-        },
-      ],
-    },
-  },
-  {
-    $unwind: {
-      path: "$createdByDetails",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  // Lookup for updatedBy user details
-  {
-    $lookup: {
-      from: "users",
-      localField: "updatedBy",
-      foreignField: "_id",
-      as: "updatedByDetails",
-      pipeline: [
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            email: 1,
-            role: 1,
-          },
-        },
-      ],
-    },
-  },
-  {
-    $unwind: {
-      path: "$updatedByDetails",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  // Add role for updatedBy user based on users array
-  {
-    $addFields: {
-      "updatedByDetails.role": {
-        $arrayElemAt: [
-          "$users.role",
-          {
-            $indexOfArray: ["$users.userId", "$updatedBy"],
-          },
-        ],
-      },
-    },
-  },
-  // Lookup for task users
-  {
-    $unwind: {
-      path: "$users",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
-    $lookup: {
-      from: "users",
-      localField: "users.userId",
-      foreignField: "_id",
-      as: "userDetails",
-      pipeline: [
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            email: 1,
-            role: 1,
-          },
-        },
-      ],
-    },
-  },
-  {
-    $unwind: {
-      path: "$userDetails",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  // Group by task ID and collect user details
-  {
-    $group: {
-      _id: "$_id",
-      name: { $first: "$name" },
-      status: { $first: "$status" },
-      archived: { $first: "$archived" },
-      dueDate: { $first: "$dueDate" },
-      createdAt: { $first: "$createdAt" },
-      updatedAt: { $first: "$updatedAt" },
-      createdByDetails: { $first: "$createdByDetails" },
-      updatedByDetails: { $first: "$updatedByDetails" },
-      users: {
-        $push: {
-          userId: "$userDetails._id",
-          name: "$userDetails.name",
-          email: "$userDetails.email",
-          role: "$users.role",
+      matchStage,
+      // Lookup for createdBy user details
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdByDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: "OWNER",
+              },
+            },
+          ],
         },
       },
-    },
-  },
-  // Lookup for tasks
-  {
-    $lookup: {
-      from: "tasks", // Assuming the tasks collection name is "tasks"
-      let: { projectId: "$_id" }, // Pass project ID to the pipeline
-      pipeline: [
-        {
-          $match: {
-            $expr: { $eq: ["$projectId", "$$projectId"] }, // Match projectId in tasks
-          },
+      {
+        $unwind: {
+          path: "$createdByDetails",
+          preserveNullAndEmptyArrays: true,
         },
-        {
-          $lookup: {
-            from: "users",
-            localField: "users",
-            foreignField: "_id",
-            as: "userDetails",
-            pipeline: [
+      },
+      // Lookup for updatedBy user details
+      {
+        $lookup: {
+          from: "users",
+          localField: "updatedBy",
+          foreignField: "_id",
+          as: "updatedByDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: "$updatedByDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Add role for updatedBy user based on users array
+      {
+        $addFields: {
+          "updatedByDetails.role": {
+            $arrayElemAt: [
+              "$users.role",
               {
-                $project: {
-                  _id: 1,
-                  name: 1, // User name
-                },
+                $indexOfArray: ["$users.userId", "$updatedBy"],
               },
             ],
           },
         },
-        {
-          $project: {
-            _id: 1,
-            name: 1,
-            status: 1,
-            userDetails: 1, // Include user details for tasks
+      },
+      // Lookup for task users
+      {
+        $unwind: {
+          path: "$users",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "users.userId",
+          foreignField: "_id",
+          as: "userDetails",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                role: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: "$userDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // Group by task ID and collect user details
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          status: { $first: "$status" },
+          archived: { $first: "$archived" },
+          dueDate: { $first: "$dueDate" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          createdByDetails: { $first: "$createdByDetails" },
+          updatedByDetails: { $first: "$updatedByDetails" },
+          users: {
+            $push: {
+              userId: "$userDetails._id",
+              name: "$userDetails.name",
+              email: "$userDetails.email",
+              role: "$users.role",
+            },
           },
         },
-      ],
-      as: "tasks", // Save the tasks in the "tasks" field
-    },
-  },
-  {
-    $project: {
-      name: 1,
-      status: 1,
-      archived: 1,
-      dueDate: 1,
-      createdAt: 1,
-      updatedAt: 1,
-      createdByDetails: 1,
-      updatedByDetails: 1,
-      users: {
-        userId: 1,
-        name: 1,
-        email: 1,
-        role: 1,
       },
-      tasks: {
-        _id: 1,
-        name:1,
-        status: 1,
-        userDetails: 1,
-      }, // Include the tasks in the final output
-    },
-  },
+      // Lookup for tasks
+      {
+        $lookup: {
+          from: "tasks", // Assuming the tasks collection name is "tasks"
+          let: { projectId: "$_id" }, // Pass project ID to the pipeline
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$projectId", "$$projectId"] }, // Match projectId in tasks
+              },
+            },
+            {
+              $lookup: {
+                from: "users",
+                localField: "users",
+                foreignField: "_id",
+                as: "userDetails",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      name: 1, // User name
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+                status: 1,
+                userDetails: 1, // Include user details for tasks
+              },
+            },
+          ],
+          as: "tasks", // Save the tasks in the "tasks" field
+        },
+      },
+      {
+        $project: {
+          name: 1,
+          status: 1,
+          archived: 1,
+          dueDate: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          createdByDetails: 1,
+          updatedByDetails: 1,
+          users: {
+            userId: 1,
+            name: 1,
+            email: 1,
+            role: 1,
+          },
+          tasks: {
+            _id: 1,
+            name:1,
+            status: 1,
+            userDetails: 1,
+          }, // Include the tasks in the final output
+        },
+      },
 
-  // Sort by createdAt descending (ensure sorting happens at the end)
-  { $sort: { createdAt: -1 } },
+      // Sort by createdAt descending (ensure sorting happens at the end)
+      { $sort: { createdAt: -1 } },
 ];
   
   const projects = await Project.aggregate(aggregationPipeline).exec();
